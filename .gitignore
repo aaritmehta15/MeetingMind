@@ -1,0 +1,53 @@
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# FAISS index files (large, rebuild-able)
+*.faiss
+*.meta.json
+*.ragindex*
+corpus/
+corpus_test/
+
+# HuggingFace cache
+~/.cache/huggingface/
+.cache/
+
+# Evaluation outputs (can regenerate)
+eval_results.json
+eval_ami_*.json
+*.extraction.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+scratch/
+
+# Reference materials (local only)
+references/
