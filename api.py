@@ -35,6 +35,7 @@ class AskRequest(BaseModel):
     transcript: str
     question: str
     provider: str = "groq"
+    enabled_tools: list[str] | None = None
 
 class CorpusBuildRequest(BaseModel):
     folder: str = "examples"
@@ -136,7 +137,12 @@ def search_endpoint(req: SearchRequest):
 @app.post("/api/ask")
 def ask_endpoint(req: AskRequest):
     try:
-        res = run_agent_with_steps(req.transcript, req.question, provider=req.provider)
+        res = run_agent_with_steps(
+            req.transcript,
+            req.question,
+            provider=req.provider,
+            enabled_tools=req.enabled_tools,
+        )
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

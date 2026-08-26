@@ -33,14 +33,21 @@ Begin!"""
 def run_agent_with_steps(
     transcript_text: str,
     question: str,
-    provider: str = "groq"
+    provider: str = "groq",
+    enabled_tools: list[str] | None = None,
 ) -> dict[str, Any]:
     start_t = time.perf_counter()
 
-    # Build the RAG index and tools
+    # Build the RAG index and all tools
     idx = HierarchicalRAGIndex(window_size=5)
     idx.build(transcript_text)
-    tools = build_tools(transcript_text, idx, provider)
+    all_tools = build_tools(transcript_text, idx, provider)
+    
+    # Filter tools if the caller specified a whitelist
+    if enabled_tools is not None:
+        tools = [t for t in all_tools if t.name in enabled_tools]
+    else:
+        tools = all_tools
     
     # Format tool descriptions
     tool_desc = ""
