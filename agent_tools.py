@@ -8,6 +8,8 @@ Available tools:
   - rag_search    : Search the transcript index for relevant excerpts
   - get_extraction: Run the full extraction pipeline and return JSON
   - get_summary   : Return just the meeting summary
+  - calculator    : Safely evaluate a mathematical expression (pure Python, no API)
+  - web_search    : Search the web via DuckDuckGo (free, no API key needed)
 """
 
 from __future__ import annotations
@@ -150,6 +152,107 @@ def make_get_summary_tool(transcript_text: str, provider: str) -> Tool:
     )
 
 
+def make_calculator_tool() -> Tool:
+    """A safe arithmetic calculator using Python's ast module (no eval of arbitrary code)."""
+
+    def _calculator(args: dict) -> str:
+        import ast
+        import operator
+        expression = str(args.get("expression", "")).strip()
+        if not expression:
+            return "Error: No expression provided."
+
+        # Safe operator whitelist — prevents code injection
+        SAFE_OPS = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+            ast.USub: operator.neg,
+            ast.Mod: operator.mod,
+        }
+
+        def _eval(node):
+            if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+                return node.value
+            elif isinstance(node, ast.BinOp) and type(node.op) in SAFE_OPS:
+                return SAFE_OPS[type(node.op)](_eval(node.left), _eval(node.right))
+            elif isinstance(node, ast.UnaryOp) and type(node.op) in SAFE_OPS:
+                return SAFE_OPS[type(node.op)](_eval(node.operand))
+            else:
+                raise ValueError(f"Unsafe expression: {ast.dump(node)}")
+
+        try:
+            tree = ast.parse(expression, mode="eval")
+            result = _eval(tree.body)
+            return f"Result of `{expression}` = {result}"
+        except Exception as e:
+            return f"Calculator error: {e}. Please provide a valid arithmetic expression like '10000 + 15000 * 2'."
+
+    return Tool(
+        name="calculator",
+        description=(
+            "Safely evaluate a mathematical arithmetic expression. "
+            "Use this whenever the question involves numbers, totals, percentages, "
+            "averages, or any arithmetic — e.g. budgets, timelines, counts. "
+            "Pass a clean expression like '10000 + 15000' or '(50000 * 0.15)'."
+        ),
+        parameters={
+            "expression": {
+                "type": "string",
+                "description": "A valid arithmetic expression using +, -, *, /, **, % operators",
+                "required": True,
+            }
+        },
+        fn=_calculator,
+    )
+
+
+def make_web_search_tool() -> Tool:
+    """Free DuckDuckGo web search — no API key required."""
+
+    def _web_search(args: dict) -> str:
+        query = str(args.get("query", "")).strip()
+        if not query:
+            return "Error: No search query provided."
+        try:
+            from ddgs import DDGS
+            results = []
+            with DDGS() as ddgs:
+                for r in ddgs.text(query, max_results=3):
+                    results.append(
+                        f"Title: {r.get('title', 'N/A')}\n"
+                        f"URL: {r.get('href', 'N/A')}\n"
+                        f"Snippet: {r.get('body', 'N/A')}"
+                    )
+            if not results:
+                return "No web results found for this query."
+            return "\n\n---\n\n".join(results)
+        except ImportError:
+            return "Error: ddgs package not installed. Run: pip install ddgs"
+        except Exception as e:
+            return f"Web search error: {e}"
+
+    return Tool(
+        name="web_search",
+        description=(
+            "Search the live web via DuckDuckGo (free, no API key required). "
+            "Use this when the question references a company, person, product, event, "
+            "or any entity that requires real-world background knowledge not present in the transcript. "
+            "For example: 'Who is Heinz?', 'What is Dunder Mifflin?', 'What is the current price of X?'"
+        ),
+        parameters={
+            "query": {
+                "type": "string",
+                "description": "The search query to look up on the web",
+                "required": True,
+            }
+        },
+        fn=_web_search,
+    )
+
+
 def build_tools(
     transcript_text: str,
     idx,
@@ -169,4 +272,6 @@ def build_tools(
         make_rag_search_tool(idx),
         make_get_extraction_tool(transcript_text, provider),
         make_get_summary_tool(transcript_text, provider),
+        make_calculator_tool(),
+        make_web_search_tool(),
     ]
