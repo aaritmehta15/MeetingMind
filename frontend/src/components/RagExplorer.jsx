@@ -1,27 +1,32 @@
 import React, { useState } from 'react';
 import { Search, Layers, Loader2, Target, GitMerge, Info, FileText, Sparkles } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-export default function RagExplorer({ examples }) {
+export default function RagExplorer({ userMeetings }) {
+  const { authFetch } = useAuth();
   const [activeExample, setActiveExample] = useState(null);
   const [transcript, setTranscript] = useState('');
   const [query, setQuery] = useState('what was decided about the roadmap?');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
 
-  const loadExample = (ex) => {
-    setActiveExample(ex.id);
-    setTranscript(ex.text);
+  const loadMeeting = (m) => {
+    setActiveExample(m.id);
+    setTranscript(m.text);
     setResults([]);
+    setQuery('');
   };
 
   const handleSearch = async () => {
-    if (!transcript.trim() || !query.trim()) return;
+    if (!query.trim() || !transcript.trim()) return;
     setLoading(true);
+    setResults([]);
     try {
-      const res = await fetch('/api/search', {
+      const payload = activeExample ? { meeting_id: activeExample, query, k: 3 } : { transcript, query, k: 3 };
+      const res = await authFetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript, query, k: 3 }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Search failed');
@@ -54,14 +59,14 @@ export default function RagExplorer({ examples }) {
             Choose Transcript to Index:
           </span>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {examples.map(ex => (
+            {userMeetings && userMeetings.map(m => (
               <button
-                key={ex.id}
-                onClick={() => loadExample(ex)}
-                className={`btn btn-xs ${activeExample === ex.id ? 'btn-cyan' : 'btn-secondary'}`}
+                key={m.id}
+                onClick={() => loadMeeting(m)}
+                className={`btn btn-xs ${activeExample === m.id ? 'btn-cyan' : 'btn-secondary'}`}
               >
                 <FileText size={11} />
-                <span>{ex.filename.replace('.txt', '').replace(/-/g, ' ')}</span>
+                <span>{m.title}</span>
               </button>
             ))}
           </div>

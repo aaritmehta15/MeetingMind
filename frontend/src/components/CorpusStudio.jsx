@@ -9,8 +9,10 @@ const SAMPLE_QUERIES = [
   'What was decided about CI/CD and engineering roadmaps?',
   'Summarize all client follow-ups across all transcripts',
 ];
+import { useAuth } from '../context/AuthContext';
 
-export default function CorpusStudio({ examples, provider }) {
+export default function CorpusStudio({ userMeetings, provider }) {
+  const { authFetch } = useAuth();
   const [question, setQuestion] = useState(SAMPLE_QUERIES[0]);
   const [loading, setLoading] = useState(false);
   const [indexing, setIndexing] = useState(false);
@@ -18,7 +20,7 @@ export default function CorpusStudio({ examples, provider }) {
   
   // Meeting Filter & Selection State
   const [selectedMeetings, setSelectedMeetings] = useState(
-    () => new Set(examples.map(ex => ex.id))
+    () => new Set((userMeetings || []).map(m => m.id))
   );
   const [searchFilter, setSearchFilter] = useState('');
   const [previewMeeting, setPreviewMeeting] = useState(null);
@@ -35,7 +37,7 @@ export default function CorpusStudio({ examples, provider }) {
 
   // Select all meetings
   const handleSelectAll = () => {
-    setSelectedMeetings(new Set(examples.map(ex => ex.id)));
+    setSelectedMeetings(new Set((userMeetings || []).map(m => m.id)));
   };
 
   // Deselect all
@@ -44,9 +46,9 @@ export default function CorpusStudio({ examples, provider }) {
   };
 
   // Filtered list of meetings based on search input
-  const filteredExamples = examples.filter(ex => 
-    ex.filename.toLowerCase().includes(searchFilter.toLowerCase()) ||
-    ex.id.toLowerCase().includes(searchFilter.toLowerCase())
+  const filteredMeetings = (userMeetings || []).filter(m => 
+    m.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
+    m.id.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
   const handleAskCorpus = async () => {
@@ -57,9 +59,8 @@ export default function CorpusStudio({ examples, provider }) {
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/corpus/ask', {
+      const res = await authFetch('/api/corpus/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           question, 
           provider, 
@@ -80,9 +81,8 @@ export default function CorpusStudio({ examples, provider }) {
   const handleRebuildCorpus = async () => {
     setIndexing(true);
     try {
-      const res = await fetch('/api/corpus/build', {
+      const res = await authFetch('/api/corpus/build', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ folder: 'examples' }),
       });
       const data = await res.json();
@@ -104,7 +104,7 @@ export default function CorpusStudio({ examples, provider }) {
           <h2 style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span>Cross-Meeting Knowledge Corpus</span>
             <span className="badge badge-cyan">Multi-Document RAG</span>
-            <span className="badge badge-primary">{selectedMeetings.size}/{examples.length} Meetings Active</span>
+            <span className="badge badge-primary">{selectedMeetings.size}/{(userMeetings || []).length} Meetings Active</span>
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '4px' }}>
             Select exactly which meetings to include in your cross-transcript knowledge query, then synthesize cited answers.
@@ -130,7 +130,7 @@ export default function CorpusStudio({ examples, provider }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Database size={15} color="#818cf8" />
             <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Indexed Corpus Archive: Select Meetings to Query ({selectedMeetings.size} of {examples.length} Selected)
+              Indexed Corpus Archive: Select Meetings to Query ({selectedMeetings.size} of {(userMeetings || []).length} Selected)
             </span>
           </div>
 
@@ -159,12 +159,12 @@ export default function CorpusStudio({ examples, provider }) {
 
         {/* Meeting Document Cards Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '10px' }}>
-          {filteredExamples.map((ex) => {
-            const isSelected = selectedMeetings.has(ex.id);
+          {filteredMeetings.map((m) => {
+            const isSelected = selectedMeetings.has(m.id);
             return (
               <div
-                key={ex.id}
-                onClick={() => toggleMeeting(ex.id)}
+                key={m.id}
+                onClick={() => toggleMeeting(m.id)}
                 style={{
                   background: isSelected ? 'rgba(99, 102, 241, 0.09)' : 'rgba(255, 255, 255, 0.02)', 
                   border: `1px solid ${isSelected ? 'rgba(99, 102, 241, 0.45)' : 'var(--border-subtle)'}`,
@@ -206,10 +206,10 @@ export default function CorpusStudio({ examples, provider }) {
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
                     }}>
-                      {ex.filename}
+                      {m.title}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                      💬 {ex.turn_count} dialogue turns
+                      💬 {m.turn_count} dialogue turns
                     </div>
                   </div>
                 </div>
@@ -218,7 +218,7 @@ export default function CorpusStudio({ examples, provider }) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setPreviewMeeting(ex);
+                    setPreviewMeeting(m);
                   }}
                   className="btn btn-secondary btn-xs"
                   style={{ padding: '3px 6px', color: 'var(--text-dim)' }}
@@ -368,7 +368,7 @@ export default function CorpusStudio({ examples, provider }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileText size={18} color="#818cf8" />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{previewMeeting.filename}</h3>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{previewMeeting.title}</h3>
                 <span className="badge badge-primary">{previewMeeting.turn_count} turns</span>
               </div>
               <button 

@@ -6,8 +6,10 @@ import {
   TrendingUp, BarChart2, Eye, Compass, Target
 } from 'lucide-react';
 import ProductivityHub from './ProductivityHub';
+import { useAuth } from '../context/AuthContext';
 
-export default function ExtractionStudio({ examples, provider }) {
+export default function ExtractionStudio({ userMeetings, provider }) {
+  const { authFetch } = useAuth();
   const [activeExample, setActiveExample] = useState(null);
   const [transcript, setTranscript] = useState('');
   const [loading, setLoading] = useState(false);
@@ -102,9 +104,9 @@ export default function ExtractionStudio({ examples, provider }) {
     return () => clearInterval(interval);
   }, [isPlaying, parsedTurns.length, playbackSpeed]);
 
-  const loadExample = (ex) => {
-    setActiveExample(ex.id);
-    setTranscript(ex.text);
+  const loadMeeting = (m) => {
+    setActiveExample(m.id);
+    setTranscript(m.text);
     setResult(null);
     setIsPlaying(false);
     setCurrentPlaybackTurn(0);
@@ -144,10 +146,10 @@ export default function ExtractionStudio({ examples, provider }) {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch('/api/extract', {
+      const payload = activeExample ? { meeting_id: activeExample, provider } : { transcript, provider };
+      const res = await authFetch('/api/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript, provider }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Extraction failed');
@@ -233,15 +235,15 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
         {/* Quick Sample Presets */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)', fontWeight: 700 }}>Choose Meeting:</span>
-          {examples.map(ex => (
+          {userMeetings && userMeetings.map(m => (
             <button
-              key={ex.id}
-              onClick={() => loadExample(ex)}
-              className={`btn btn-xs ${activeExample === ex.id ? 'btn-cyan' : 'btn-secondary'}`}
+              key={m.id}
+              onClick={() => loadMeeting(m)}
+              className={`btn btn-xs ${activeExample === m.id ? 'btn-cyan' : 'btn-secondary'}`}
               style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
             >
               <FileText size={11} />
-              <span>{ex.filename.replace('.txt', '').replace(/-/g, ' ')}</span>
+              <span>{m.title}</span>
             </button>
           ))}
           {transcript && (

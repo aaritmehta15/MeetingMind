@@ -56,17 +56,21 @@ function SectionHeader({ icon: Icon, title, color, badge }) {
     </div>
   );
 }
+import { useAuth } from '../context/AuthContext';
 
-export default function MeetingAnalytics({ examples }) {
+export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
+  const { authFetch } = useAuth();
   const [transcript, setTranscript] = useState('');
-  const [selectedExample, setSelectedExample] = useState(null);
+  const [selectedMeetingId, setSelectedMeetingId] = useState(null);
+  const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
-  const loadExample = (ex) => {
-    setTranscript(ex.text);
-    setSelectedExample(ex.id);
+  const loadMeeting = (m) => {
+    setTranscript(m.text);
+    setTitle(m.title);
+    setSelectedMeetingId(m.id);
     setData(null);
     setError(null);
   };
@@ -77,10 +81,10 @@ export default function MeetingAnalytics({ examples }) {
     setData(null);
     setError(null);
     try {
-      const res = await fetch('/api/analyze', {
+      const bodyPayload = selectedMeetingId ? { meeting_id: selectedMeetingId } : { transcript };
+      const res = await authFetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify(bodyPayload),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.detail || 'Analysis failed');
@@ -89,6 +93,23 @@ export default function MeetingAnalytics({ examples }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveMeeting = async () => {
+    if (!transcript.trim()) return;
+    try {
+      const res = await authFetch('/api/meetings', {
+        method: 'POST',
+        body: JSON.stringify({ title: title || 'Untitled Meeting', transcript_text: transcript }),
+      });
+      if (res.ok) {
+        await fetchUserMeetings();
+        const json = await res.json();
+        setSelectedMeetingId(json.id);
+      }
+    } catch (err) {
+      console.error("Failed to save meeting", err);
     }
   };
 
@@ -124,46 +145,63 @@ export default function MeetingAnalytics({ examples }) {
         {/* ── LEFT PANEL: Input ─────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-          {/* Example presets */}
-          {examples && examples.length > 0 && (
+          {/* My Saved Meetings */}
+          {userMeetings && userMeetings.length > 0 && (
             <div className="glass-panel" style={{ padding: '16px' }}>
               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                Sample Transcripts
+                My Saved Meetings
               </div>
-              {examples.map((ex) => (
-                <button
-                  key={ex.id}
-                  onClick={() => loadExample(ex)}
-                  style={{
-                    width: '100%', textAlign: 'left', padding: '9px 12px', marginBottom: '5px',
-                    background: selectedExample === ex.id ? 'rgba(20,184,166,0.12)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${selectedExample === ex.id ? 'rgba(20,184,166,0.4)' : 'var(--border-subtle)'}`,
-                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'space-between', gap: '8px',
-                    transition: 'all 0.18s ease'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: selectedExample === ex.id ? '#2dd4bf' : '#f1f5f9' }}>
-                      {ex.id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {userMeetings.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => loadMeeting(m)}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '9px 12px', marginBottom: '5px',
+                      background: selectedMeetingId === m.id ? 'rgba(20,184,166,0.12)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${selectedMeetingId === m.id ? 'rgba(20,184,166,0.4)' : 'var(--border-subtle)'}`,
+                      borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+                      transition: 'all 0.18s ease'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: selectedMeetingId === m.id ? '#2dd4bf' : '#f1f5f9' }}>
+                        {m.title}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{m.turn_count} turns</div>
                     </div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{ex.turn_count} turns</div>
-                  </div>
-                  <ChevronRight size={13} color={selectedExample === ex.id ? '#14b8a6' : '#64748b'} />
-                </button>
-              ))}
+                    <ChevronRight size={13} color={selectedMeetingId === m.id ? '#14b8a6' : '#64748b'} />
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
           {/* Transcript textarea */}
           <div className="glass-panel" style={{ padding: '16px' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Or Paste Transcript
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Or Paste Transcript</span>
+              {!selectedMeetingId && transcript.trim() && (
+                <button onClick={handleSaveMeeting} style={{ background: 'none', border: 'none', color: '#14b8a6', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }}>
+                  Save to My Meetings
+                </button>
+              )}
             </div>
+            {!selectedMeetingId && (
+              <input 
+                type="text" 
+                value={title} 
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Meeting Title (Optional)"
+                className="textarea-field"
+                style={{ width: '100%', padding: '8px', fontSize: '0.8rem', marginBottom: '8px', height: '34px' }}
+              />
+            )}
             <textarea
               className="textarea-field"
               value={transcript}
-              onChange={e => { setTranscript(e.target.value); setSelectedExample(null); }}
+              onChange={e => { setTranscript(e.target.value); setSelectedMeetingId(null); }}
               placeholder={"Speaker A: Hello everyone...\nSpeaker B: Let's start with the budget.\n..."}
               style={{ height: '160px', width: '100%' }}
             />

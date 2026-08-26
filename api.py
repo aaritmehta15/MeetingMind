@@ -2,16 +2,52 @@ import os
 import time
 import json
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from contextlib import asynccontextmanager
+
+from database import engine, Base, get_db
+from models import User, Meeting
+from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
 from extractor import run_extraction
 from rag_index import HierarchicalRAGIndex
 from agent import run_agent_with_steps
 from corpus import build_corpus, corpus_ask
 
-app = FastAPI(title="MeetingMind Backend")
+def seed_db():
+    db = next(get_db())
+    try:
+        # Create demo user if not exists
+        demo_user = db.query(User).filter(User.username == "demo").first()
+        if not demo_user:
+            demo_user = User(username="demo", hashed_password=get_password_hash("password"))
+            db.add(demo_user)
+            db.commit()
+            db.refresh(demo_user)
+
+            # Load demo transcripts
+            examples_dir = Path("examples")
+            if examples_dir.exists():
+                for f in examples_dir.glob("*.txt"):
+                    text = f.read_text(encoding="utf-8")
+                    meeting = Meeting(user_id=demo_user.id, title=f.stem, transcript_text=text)
+                    db.add(meeting)
+                db.commit()
+    finally:
+        db.close()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create tables
+    Base.metadata.create_all(bind=engine)
+    # Seed DB
+    seed_db()
+    yield
+
+app = FastAPI(title="MeetingMind Backend", lifespan=lifespan)
 
 # Allow Vite frontend to connect
 app.add_middleware(
@@ -22,17 +58,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class MeetingCreate(BaseModel):
+    title: str
+    transcript_text: str
+
 class ExtractRequest(BaseModel):
-    transcript: str
+    transcript: str | None = None
+    meeting_id: int | None = None
     provider: str = "groq"
 
 class SearchRequest(BaseModel):
-    transcript: str
+    transcript: str | None = None
+    meeting_id: int | None = None
     query: str
     k: int = 5
 
 class AskRequest(BaseModel):
-    transcript: str
+    transcript: str | None = None
+    meeting_id: int | None = None
     question: str
     provider: str = "groq"
     enabled_tools: list[str] | None = None
@@ -47,7 +102,9 @@ class CorpusAskRequest(BaseModel):
     selected_meetings: list[str] | None = None
 
 class AnalyzeRequest(BaseModel):
-    transcript: str
+    transcript: str | None = None
+    meeting_id: int | None = None
+
 
 
 @app.get("/api/status")
@@ -82,11 +139,70 @@ def get_examples():
     return sorted(out, key=lambda x: x["id"])
 
 
+# --- AUTH ENDPOINTS ---
+
+@app.post("/api/auth/register", response_model=Token)
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    hashed_password = get_password_hash(user.password)
+    new_user = User(username=user.username, hashed_password=hashed_password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    access_token = create_access_token(data={"sub": new_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/api/auth/login", response_model=Token)
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if not db_user or not verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    access_token = create_access_token(data={"sub": db_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+# --- MEETING ENDPOINTS ---
+
+@app.get("/api/meetings")
+def get_user_meetings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    meetings = db.query(Meeting).filter(Meeting.user_id == current_user.id).order_by(Meeting.created_at.desc()).all()
+    return [{"id": m.id, "title": m.title, "created_at": m.created_at, "turn_count": len([l for l in m.transcript_text.splitlines() if ":" in l]), "text": m.transcript_text} for m in meetings]
+
+@app.post("/api/meetings")
+def create_meeting(meeting: MeetingCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    new_meeting = Meeting(user_id=current_user.id, title=meeting.title, transcript_text=meeting.transcript_text)
+    db.add(new_meeting)
+    db.commit()
+    db.refresh(new_meeting)
+    return {"id": new_meeting.id, "title": new_meeting.title, "message": "Meeting saved successfully"}
+
+@app.delete("/api/meetings/{meeting_id}")
+def delete_meeting(meeting_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    m = db.query(Meeting).filter(Meeting.id == meeting_id, Meeting.user_id == current_user.id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    db.delete(m)
+    db.commit()
+    return {"message": "Deleted"}
+
+def _get_transcript_text(req, db: Session, current_user: User):
+    if req.transcript:
+        return req.transcript
+    if req.meeting_id:
+        m = db.query(Meeting).filter(Meeting.id == req.meeting_id, Meeting.user_id == current_user.id).first()
+        if m:
+            return m.transcript_text
+        raise HTTPException(status_code=404, detail="Meeting not found or access denied")
+    raise HTTPException(status_code=400, detail="Must provide transcript or meeting_id")
+
+
 @app.post("/api/extract")
-def extract_endpoint(req: ExtractRequest):
+def extract_endpoint(req: ExtractRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     start_t = time.perf_counter()
     try:
-        extraction, report = run_extraction(req.transcript, provider=req.provider)
+        t_text = _get_transcript_text(req, db, current_user)
+        extraction, report = run_extraction(t_text, provider=req.provider)
         
         # Serialize to dict for JSON response
         out = {
@@ -115,11 +231,12 @@ def extract_endpoint(req: ExtractRequest):
 
 
 @app.post("/api/search")
-def search_endpoint(req: SearchRequest):
+def search_endpoint(req: SearchRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     start_t = time.perf_counter()
     try:
+        t_text = _get_transcript_text(req, db, current_user)
         idx = HierarchicalRAGIndex(window_size=5)
-        idx.build(req.transcript)
+        idx.build(t_text)
         results = idx.search(req.query, k=req.k)
         
         out = []
@@ -139,10 +256,11 @@ def search_endpoint(req: SearchRequest):
 
 
 @app.post("/api/ask")
-def ask_endpoint(req: AskRequest):
+def ask_endpoint(req: AskRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:
+        t_text = _get_transcript_text(req, db, current_user)
         res = run_agent_with_steps(
-            req.transcript,
+            t_text,
             req.question,
             provider=req.provider,
             enabled_tools=req.enabled_tools,
@@ -153,13 +271,13 @@ def ask_endpoint(req: AskRequest):
 
 
 @app.post("/api/analyze")
-def analyze_endpoint(req: AnalyzeRequest):
+def analyze_endpoint(req: AnalyzeRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Run all 5 local NLP tools on a transcript and return unified analytics.
     Zero LLM calls — all computation is local. Typically < 500ms."""
     import re
     from collections import Counter
 
-    t = req.transcript
+    t = _get_transcript_text(req, db, current_user)
     start_t = time.perf_counter()
 
     # ── 1. Speaker Parsing ────────────────────────────────────────────────────
@@ -286,7 +404,7 @@ def analyze_endpoint(req: AnalyzeRequest):
 
 
 @app.post("/api/corpus/build")
-def api_corpus_build(req: CorpusBuildRequest):
+def api_corpus_build(req: CorpusBuildRequest, current_user: User = Depends(get_current_user)):
     try:
         folder = Path(req.folder)
         paths = list(folder.glob("*.txt"))
@@ -304,7 +422,7 @@ def api_corpus_build(req: CorpusBuildRequest):
 
 
 @app.post("/api/corpus/ask")
-def api_corpus_ask(req: CorpusAskRequest):
+def api_corpus_ask(req: CorpusAskRequest, current_user: User = Depends(get_current_user)):
     start_t = time.perf_counter()
     try:
         answer = corpus_ask(

@@ -3,26 +3,50 @@ import Header from './components/Header';
 import Navigation from './components/Navigation';
 import ExtractionStudio from './components/ExtractionStudio';
 import QueryHub from './components/QueryHub';
+import AuthScreen from './components/AuthScreen';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-export default function App() {
+function AppContent() {
+  const { isAuthenticated, authFetch } = useAuth();
   const [activeTab, setActiveTab] = useState('studio');
   const [provider, setProvider] = useState('gemini');
   const [status, setStatus] = useState(null);
-  const [examples, setExamples] = useState([]);
+  const [userMeetings, setUserMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserMeetings = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await authFetch('/api/meetings');
+      if (res.ok) {
+        setUserMeetings(await res.json());
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([
-      fetch('/api/status').then((r) => r.json()).catch(() => ({ default_provider: 'groq' })),
-      fetch('/api/examples').then((r) => r.json()).catch(() => []),
-    ]).then(([statusData, examplesData]) => {
-      setStatus(statusData);
-      setExamples(examplesData);
-      if (statusData?.default_provider) setProvider(statusData.default_provider);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    if (isAuthenticated) {
+      fetchUserMeetings();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetch('/api/status')
+      .then((r) => r.json())
+      .then((statusData) => {
+        setStatus(statusData);
+        if (statusData?.default_provider) setProvider(statusData.default_provider);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
+  if (!isAuthenticated) {
+    return <AuthScreen />;
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>
@@ -50,8 +74,8 @@ export default function App() {
           </div>
         ) : (
           <>
-            {activeTab === 'studio'       && <ExtractionStudio examples={examples} provider={provider} />}
-            {activeTab === 'intelligence' && <QueryHub examples={examples} provider={provider} />}
+            {activeTab === 'studio'       && <ExtractionStudio userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
+            {activeTab === 'intelligence' && <QueryHub userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
           </>
         )}
       </main>
@@ -73,12 +97,20 @@ export default function App() {
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
           <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>MeetingMind Engine Active</span>
           <span style={{ color: 'rgba(255,255,255,0.15)' }}>•</span>
-          <span>FastAPI + Vite React + FAISS-CPU + Pydantic v2 + ReAct Agent</span>
+          <span>FastAPI + Vite React + SQLite + Auth + FAISS-CPU</span>
         </div>
         <div style={{ color: 'var(--text-muted)' }}>
           Generative AI Laboratory — B.Tech (AI &amp; Data Science)
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

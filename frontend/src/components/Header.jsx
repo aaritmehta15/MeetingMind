@@ -1,7 +1,9 @@
 import React from 'react';
-import { Brain, Cpu, Code2, ShieldCheck, Zap, Activity } from 'lucide-react';
+import { Brain, Cpu, Code2, ShieldCheck, Zap, Activity, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Header({ status, provider, onProviderChange }) {
+  const { logout } = useAuth();
   return (
     <header style={{
       borderBottom: '1px solid rgba(20, 184, 166, 0.12)',
@@ -161,6 +163,30 @@ export default function Header({ status, provider, onProviderChange }) {
           <Code2 size={13} />
           <span>GitHub</span>
         </a>
+
+        {/* Logout Button */}
+        <button
+          onClick={logout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            color: '#fb7185',
+            fontSize: '0.73rem',
+            fontWeight: 600,
+            padding: '5px 11px',
+            borderRadius: '8px',
+            border: '1px solid rgba(244, 63, 94, 0.2)',
+            background: 'rgba(244, 63, 94, 0.05)',
+            cursor: 'pointer',
+            transition: 'all 0.18s ease'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(244, 63, 94, 0.15)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(244, 63, 94, 0.05)'; }}
+        >
+          <LogOut size={13} />
+          <span>Sign Out</span>
+        </button>
       </div>
     </header>
   );

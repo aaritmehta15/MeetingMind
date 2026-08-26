@@ -4,7 +4,7 @@ import MeetingAnalytics from './MeetingAnalytics';
 import CorpusStudio from './CorpusStudio';
 import { Search, BarChart2, Layers, Sparkles } from 'lucide-react';
 
-export default function QueryHub({ examples, provider }) {
+export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) {
   const [mode, setMode] = useState('analytics'); // Default to Analytics
 
   const modes = [
@@ -125,9 +125,9 @@ export default function QueryHub({ examples, provider }) {
 
       {/* Render the Active Mode View */}
       <div style={{ flex: 1 }}>
-        {mode === 'analytics' && <MeetingAnalytics examples={examples} provider={provider} />}
-        {mode === 'rag'       && <RagExplorer examples={examples} />}
-        {mode === 'corpus'    && <CorpusStudio examples={examples} provider={provider} />}
+        {mode === 'analytics' && <MeetingAnalytics userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
+        {mode === 'rag'       && <RagExplorer userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} />}
+        {mode === 'corpus'    && <CorpusStudio userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
       </div>
     </div>
   );
