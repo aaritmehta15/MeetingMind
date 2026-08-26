@@ -1,98 +1,115 @@
 import React from 'react';
-import { Sparkles, Brain, Cpu, Code2, ShieldCheck, Activity } from 'lucide-react';
+import { Brain, Cpu, Code2, ShieldCheck, Zap, Activity } from 'lucide-react';
 
 export default function Header({ status, provider, onProviderChange }) {
   return (
     <header style={{
-      borderBottom: '1px solid var(--border-subtle)',
-      background: 'rgba(6, 8, 15, 0.82)',
+      borderBottom: '1px solid rgba(20, 184, 166, 0.12)',
+      background: 'rgba(8, 12, 20, 0.88)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      padding: '12px 28px',
+      padding: '0 28px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: '16px',
+      height: '56px',
       flexWrap: 'wrap'
     }}>
-      {/* Brand Identity */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: 'var(--radius-md)',
-          background: 'var(--primary-gradient)',
+          width: '32px',
+          height: '32px',
+          borderRadius: '9px',
+          background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 0 20px rgba(99, 102, 241, 0.55)',
+          boxShadow: '0 0 16px rgba(20, 184, 166, 0.5)',
           flexShrink: 0
         }}>
-          <Brain size={22} color="#ffffff" />
+          <Brain size={18} color="#ffffff" />
         </div>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ 
-              fontSize: '1.2rem', 
-              fontWeight: 800, 
-              letterSpacing: '-0.03em', 
-              background: 'linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%)', 
-              WebkitBackgroundClip: 'text', 
-              WebkitTextFillColor: 'transparent' 
-            }}>
-              MeetingMind
-            </span>
-            <span className="badge badge-primary" style={{ fontSize: '0.65rem', padding: '2px 7px', fontWeight: 700 }}>
-              v2.0 PRO
-            </span>
-          </div>
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-            Autonomous Meeting Intelligence & Grounded Extraction
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{
+            fontFamily: "'Syne', sans-serif",
+            fontSize: '1.1rem',
+            fontWeight: 800,
+            letterSpacing: '-0.03em',
+            background: 'linear-gradient(135deg, #ffffff 20%, #94a3b8 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            MeetingMind
+          </span>
+          <span style={{
+            fontSize: '0.64rem',
+            fontWeight: 700,
+            padding: '2px 7px',
+            borderRadius: '4px',
+            background: 'rgba(20,184,166,0.15)',
+            color: '#2dd4bf',
+            border: '1px solid rgba(20,184,166,0.3)',
+            letterSpacing: '0.05em'
+          }}>
+            v2.0
+          </span>
         </div>
       </div>
 
-      {/* Right Controls: Status, Provider Switcher, GitHub */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-        {/* Real-time Citation Guard / Health Badge */}
-        <div className="badge badge-verified" style={{ padding: '6px 12px', fontSize: '0.75rem', gap: '6px', background: 'rgba(16, 185, 129, 0.1)' }}>
-          <ShieldCheck size={14} />
-          <span>Citation Guard: 0% Hallucination</span>
+      {/* Right Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        {/* Citation Guard Status */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '0.74rem',
+          fontWeight: 600,
+          color: '#34d399',
+          background: 'rgba(16, 185, 129, 0.08)',
+          border: '1px solid rgba(16,185,129,0.22)',
+          padding: '4px 11px',
+          borderRadius: 'var(--radius-full)'
+        }}>
+          <ShieldCheck size={13} />
+          <span>Citation Guard Active</span>
         </div>
 
-        {/* LLM Engine Switcher */}
+        {/* LLM Provider Switcher */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           background: 'rgba(0, 0, 0, 0.4)',
           padding: '3px',
-          borderRadius: 'var(--radius-md)',
+          borderRadius: '10px',
           border: '1px solid var(--border-subtle)',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)'
         }}>
           <button
             onClick={() => onProviderChange('groq')}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-sm)',
+              gap: '5px',
+              padding: '5px 11px',
+              borderRadius: '7px',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '0.75rem',
+              fontSize: '0.73rem',
               fontWeight: 600,
-              background: provider === 'groq' ? 'var(--primary-gradient)' : 'transparent',
+              fontFamily: "'Inter', sans-serif",
+              background: provider === 'groq' ? 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)' : 'transparent',
               color: provider === 'groq' ? '#ffffff' : 'var(--text-muted)',
               transition: 'all 0.18s ease',
-              boxShadow: provider === 'groq' ? '0 2px 8px rgba(99,102,241,0.4)' : 'none'
+              boxShadow: provider === 'groq' ? '0 2px 8px rgba(20,184,166,0.4)' : 'none'
             }}
           >
-            <Cpu size={13} />
-            <span>Groq (Compound-Mini)</span>
+            <Zap size={12} />
+            <span>Groq</span>
           </button>
 
           <button
@@ -100,25 +117,26 @@ export default function Header({ status, provider, onProviderChange }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-sm)',
+              gap: '5px',
+              padding: '5px 11px',
+              borderRadius: '7px',
               border: 'none',
               cursor: 'pointer',
-              fontSize: '0.75rem',
+              fontSize: '0.73rem',
               fontWeight: 600,
-              background: provider === 'gemini' ? 'var(--cyan-gradient)' : 'transparent',
+              fontFamily: "'Inter', sans-serif",
+              background: provider === 'gemini' ? 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)' : 'transparent',
               color: provider === 'gemini' ? '#ffffff' : 'var(--text-muted)',
               transition: 'all 0.18s ease',
-              boxShadow: provider === 'gemini' ? '0 2px 8px rgba(6,182,212,0.4)' : 'none'
+              boxShadow: provider === 'gemini' ? '0 2px 8px rgba(249,115,22,0.4)' : 'none'
             }}
           >
-            <Sparkles size={13} />
-            <span>Gemini (3.5-Flash)</span>
+            <Activity size={12} />
+            <span>Gemini</span>
           </button>
         </div>
 
-        {/* GitHub Repository Link */}
+        {/* GitHub Link */}
         <a
           href="https://github.com/aaritmehta15/MeetingMind-"
           target="_blank"
@@ -126,20 +144,21 @@ export default function Header({ status, provider, onProviderChange }) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            color: 'var(--text-main)',
+            gap: '5px',
+            color: 'var(--text-muted)',
             textDecoration: 'none',
-            fontSize: '0.78rem',
+            fontSize: '0.73rem',
             fontWeight: 600,
-            padding: '6px 12px',
-            borderRadius: 'var(--radius-md)',
+            padding: '5px 11px',
+            borderRadius: '8px',
             border: '1px solid var(--border-subtle)',
-            background: 'rgba(255, 255, 255, 0.04)',
+            background: 'rgba(255,255,255,0.04)',
             transition: 'all 0.18s ease'
           }}
-          className="btn-secondary"
+          onMouseEnter={e => { e.currentTarget.style.color = '#f1f5f9'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
         >
-          <Code2 size={14} />
+          <Code2 size={13} />
           <span>GitHub</span>
         </a>
       </div>

@@ -3,8 +3,9 @@ import {
   Play, Pause, RotateCcw, CheckCircle2, XCircle, Clock, User, ShieldCheck, 
   Quote, Loader2, Sparkles, Brain, FileText, Trash2, Copy, Check, 
   Volume2, Users, Mail, CheckSquare, MessageSquare, Download, ChevronRight,
-  TrendingUp, BarChart2, Eye, Compass
+  TrendingUp, BarChart2, Eye, Compass, Target
 } from 'lucide-react';
+import ProductivityHub from './ProductivityHub';
 
 export default function ExtractionStudio({ examples, provider }) {
   const [activeExample, setActiveExample] = useState(null);
@@ -531,6 +532,14 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                   >
                     <MessageSquare size={12} /> Slack Standup
                   </button>
+                  <div style={{ width: '1px', height: '18px', background: 'var(--border-medium)', margin: '0 2px' }} />
+                  <button
+                    onClick={() => setActionTab('productivity')}
+                    className={`btn btn-xs ${actionTab === 'productivity' ? 'btn-cta' : 'btn-secondary'}`}
+                    style={{ gap: '5px' }}
+                  >
+                    <Target size={12} /> ✨ Productivity Hub
+                  </button>
                 </div>
 
                 <div className="badge badge-verified" style={{ fontSize: '0.72rem' }}>
@@ -765,6 +774,11 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                     {generateSlackMessage()}
                   </pre>
                 </div>
+              )}
+
+              {/* VIEW 5: PRODUCTIVITY HUB — Checklist / Eisenhower Matrix / Timeline */}
+              {actionTab === 'productivity' && (
+                <ProductivityHub result={result} />
               )}
 
             </>
