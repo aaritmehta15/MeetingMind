@@ -108,7 +108,7 @@ def _call_gemini(system_prompt: str, user_message: str) -> str:
     from google.genai import types
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
     resp = client.models.generate_content(
         model=model,
@@ -127,7 +127,7 @@ def _call_gemini_json(system_prompt: str, user_message: str) -> str:
     from google.genai import types
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
     resp = client.models.generate_content(
         model=model,
