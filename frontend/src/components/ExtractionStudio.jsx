@@ -130,6 +130,17 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleOpenGmail = (templateText) => {
+    let subject = 'Meeting Summary';
+    let bodyText = templateText;
+    if (templateText.startsWith('Subject: ')) {
+      const parts = templateText.split('\n\n');
+      subject = parts[0].replace('Subject: ', '');
+      bodyText = parts.slice(1).join('\n\n');
+    }
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`, '_blank');
+  };
+
   // Verbatim Grounding Spotlight: Locate quote in transcript turns & scroll to it
   const handleSpotlightQuote = (quoteText, key) => {
     setHoverQuote(key);
@@ -767,9 +778,14 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                       <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Mail size={15} /> Internal Executive Summary
                       </div>
-                      <button onClick={() => handleCopy(generateFollowupEmail('executive'), 'email_copy_exec')} className="btn btn-primary btn-xs">
-                        {copiedKey === 'email_copy_exec' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleCopy(generateFollowupEmail('executive'), 'email_copy_exec')} className="btn btn-primary btn-xs">
+                          {copiedKey === 'email_copy_exec' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
+                        </button>
+                        <button onClick={() => handleOpenGmail(generateFollowupEmail('executive'))} className="btn btn-secondary btn-xs">
+                          <Mail size={12} /> <span>Open in Gmail</span>
+                        </button>
+                      </div>
                     </div>
                     <pre style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', lineHeight: 1.6, color: '#e2e8f0', whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.35)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                       {generateFollowupEmail('executive')}
@@ -782,9 +798,14 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                       <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <CheckSquare size={15} /> Action Items Only (Internal)
                       </div>
-                      <button onClick={() => handleCopy(generateFollowupEmail('action'), 'email_copy_action')} className="btn btn-primary btn-xs">
-                        {copiedKey === 'email_copy_action' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleCopy(generateFollowupEmail('action'), 'email_copy_action')} className="btn btn-primary btn-xs">
+                          {copiedKey === 'email_copy_action' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
+                        </button>
+                        <button onClick={() => handleOpenGmail(generateFollowupEmail('action'))} className="btn btn-secondary btn-xs">
+                          <Mail size={12} /> <span>Open in Gmail</span>
+                        </button>
+                      </div>
                     </div>
                     <pre style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', lineHeight: 1.6, color: '#e2e8f0', whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.35)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                       {generateFollowupEmail('action')}
@@ -797,9 +818,14 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                       <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Mail size={15} /> Client / External Follow-up
                       </div>
-                      <button onClick={() => handleCopy(generateFollowupEmail('client'), 'email_copy_client')} className="btn btn-primary btn-xs">
-                        {copiedKey === 'email_copy_client' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleCopy(generateFollowupEmail('client'), 'email_copy_client')} className="btn btn-primary btn-xs">
+                          {copiedKey === 'email_copy_client' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
+                        </button>
+                        <button onClick={() => handleOpenGmail(generateFollowupEmail('client'))} className="btn btn-secondary btn-xs">
+                          <Mail size={12} /> <span>Open in Gmail</span>
+                        </button>
+                      </div>
                     </div>
                     <pre style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', lineHeight: 1.6, color: '#e2e8f0', whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.35)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                       {generateFollowupEmail('client')}
