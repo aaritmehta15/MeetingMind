@@ -60,6 +60,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
   const { authFetch } = useAuth();
+  const fileInputRef = React.useRef(null);
   const [transcript, setTranscript] = useState('');
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [title, setTitle] = useState('');
@@ -113,6 +114,22 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
     }
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      setTranscript(text);
+      setTitle(file.name.replace(/\.[^/.]+$/, ""));
+      setSelectedMeetingId(null);
+      setData(null);
+      // Auto-save logic could be added here, but better to let user click 'Save'
+    };
+    reader.readAsText(file);
+    e.target.value = null; // reset
+  };
+
   const maxKw = data?.keywords?.[0]?.count || 1;
 
   return (
@@ -147,9 +164,23 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
 
           {/* My Saved Meetings */}
           {userMeetings && userMeetings.length > 0 && (
-            <div className="glass-panel" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                My Saved Meetings
+            <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  My Saved Meetings
+                </div>
+                <button
+                  onClick={() => {
+                    setTranscript('');
+                    setTitle('');
+                    setSelectedMeetingId(null);
+                    setData(null);
+                  }}
+                  className="btn btn-secondary btn-xs"
+                  style={{ padding: '4px 8px', fontSize: '0.7rem' }}
+                >
+                  + New
+                </button>
               </div>
               <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 {userMeetings.map((m) => (
@@ -181,9 +212,24 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
           {/* Transcript textarea */}
           <div className="glass-panel" style={{ padding: '16px' }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Or Paste Transcript</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span>Upload or Paste Transcript</span>
+                <input 
+                  type="file" 
+                  accept=".txt" 
+                  ref={fileInputRef} 
+                  style={{ display: 'none' }} 
+                  onChange={handleFileUpload} 
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  style={{ background: 'none', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.65rem', padding: '2px 6px' }}
+                >
+                  Upload .txt
+                </button>
+              </div>
               {!selectedMeetingId && transcript.trim() && (
-                <button onClick={handleSaveMeeting} style={{ background: 'none', border: 'none', color: '#14b8a6', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }}>
+                <button onClick={handleSaveMeeting} className="btn btn-primary btn-xs" style={{ padding: '4px 10px', fontSize: '0.7rem' }}>
                   Save to My Meetings
                 </button>
               )}

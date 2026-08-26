@@ -51,3 +51,5 @@ scratch/
 
 # Reference materials (local only)
 references/
+
+app.db

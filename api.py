@@ -282,12 +282,15 @@ def analyze_endpoint(req: AnalyzeRequest, current_user: User = Depends(get_curre
 
     # ── 1. Speaker Parsing ────────────────────────────────────────────────────
     speaker_data = {}
+    ignore_list = {"date", "duration", "participants", "time", "location", "attendees", "subject"}
     for line in t.split("\n"):
         line = line.strip()
         m = re.match(r"^([A-Za-z0-9_\-\s]{1,40})\s*:\s*(.+)$", line)
         if not m:
             continue
         speaker = m.group(1).strip()
+        if speaker.lower() in ignore_list:
+            continue
         text    = m.group(2).strip()
         d = speaker_data.setdefault(speaker, {"turns": 0, "words": 0, "questions": 0})
         d["turns"]     += 1

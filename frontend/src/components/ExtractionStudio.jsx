@@ -8,8 +8,9 @@ import {
 import ProductivityHub from './ProductivityHub';
 import { useAuth } from '../context/AuthContext';
 
-export default function ExtractionStudio({ userMeetings, provider }) {
+export default function ExtractionStudio({ userMeetings, provider, fetchUserMeetings }) {
   const { authFetch } = useAuth();
+  const fileInputRef = useRef(null);
   const [activeExample, setActiveExample] = useState(null);
   const [transcript, setTranscript] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,9 +37,10 @@ export default function ExtractionStudio({ userMeetings, provider }) {
     let currentText = '';
     let timeIndex = 0;
 
+    const ignoreList = ['date', 'duration', 'participants', 'time', 'location', 'attendees', 'subject'];
     lines.forEach((line, i) => {
       const match = line.match(/^([A-Za-z0-9\s_-]+):\s*(.*)$/);
-      if (match) {
+      if (match && !ignoreList.includes(match[1].trim().toLowerCase())) {
         turns.push({
           id: i,
           speaker: match[1].trim(),
@@ -141,6 +143,32 @@ export default function ExtractionStudio({ userMeetings, provider }) {
     }
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const title = file.name.replace(/\.[^/.]+$/, "");
+      try {
+        const res = await authFetch('/api/meetings', {
+          method: 'POST',
+          body: JSON.stringify({ title, transcript_text: text }),
+        });
+        if (res.ok) {
+          await fetchUserMeetings?.();
+          const json = await res.json();
+          // Load the newly saved meeting
+          loadMeeting({ id: json.id, title, transcript_text: text });
+        }
+      } catch (err) {
+        console.error("Failed to upload meeting", err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // reset
+  };
+
   const handleExtract = async () => {
     if (!transcript.trim()) return;
     setLoading(true);
@@ -158,6 +186,25 @@ export default function ExtractionStudio({ userMeetings, provider }) {
       alert('Error extracting: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSavePasted = async () => {
+    if (!transcript.trim()) return;
+    try {
+      // Create a basic title based on the first few words or a default
+      const defaultTitle = "Pasted Meeting " + new Date().toLocaleTimeString();
+      const res = await authFetch('/api/meetings', {
+        method: 'POST',
+        body: JSON.stringify({ title: defaultTitle, transcript_text: transcript }),
+      });
+      if (res.ok) {
+        await fetchUserMeetings?.();
+        const json = await res.json();
+        loadMeeting({ id: json.id, title: defaultTitle, transcript_text: transcript });
+      }
+    } catch (err) {
+      console.error("Failed to save pasted meeting", err);
     }
   };
 
@@ -246,6 +293,21 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
               <span>{m.title}</span>
             </button>
           ))}
+          <div style={{ width: '1px', height: '16px', background: 'var(--border-medium)', margin: '0 4px' }} />
+          <input 
+            type="file" 
+            accept=".txt" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleFileUpload} 
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="btn btn-primary btn-xs"
+          >
+            + Upload .txt
+          </button>
+          
           {transcript && (
             <button onClick={handleClear} className="btn btn-secondary btn-xs" style={{ color: '#fb7185' }}>
               <Trash2 size={11} /> Clear
@@ -268,6 +330,41 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
         {/* ══ LEFT PANE: Interactive Transcript & Simulation ══ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           
+          {/* Transcript Editor */}
+          <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ 
+              padding: '12px 18px', 
+              borderBottom: '1px solid var(--border-subtle)', 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center' 
+            }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Raw Input Transcript
+              </span>
+              {!activeExample && transcript.trim() && (
+                <button onClick={handleSavePasted} className="btn btn-primary btn-xs" style={{ padding: '4px 10px', fontSize: '0.7rem' }}>
+                  Save to My Meetings
+                </button>
+              )}
+            </div>
+            
+            <textarea
+              value={transcript}
+              onChange={(e) => {
+                setTranscript(e.target.value);
+                setActiveExample(null);
+              }}
+              placeholder={"Speaker A: Let's start the sync...\nSpeaker B: I've updated the roadmap.\n..."}
+              style={{
+                flex: 1, minHeight: '220px', width: '100%', padding: '16px 18px',
+                background: 'transparent', border: 'none', color: '#f1f5f9',
+                fontSize: '0.85rem', lineHeight: 1.6, resize: 'none', outline: 'none',
+                fontFamily: 'var(--font-mono)'
+              }}
+            />
+          </div>
+
           {/* Transcript Player & Dialogue Viewer */}
           <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             

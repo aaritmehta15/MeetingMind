@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  Layers, Database, RefreshCw, FileText, CheckCircle2, Search, 
-  Sparkles, BookOpen, Quote, CheckSquare, Square, Filter, Eye, X, AlertTriangle 
+import {
+  Layers, Database, RefreshCw, FileText, CheckCircle2, Search,
+  Sparkles, BookOpen, Quote, CheckSquare, Square, Filter, Eye, X, AlertTriangle
 } from 'lucide-react';
 
 const SAMPLE_QUERIES = [
@@ -11,13 +11,14 @@ const SAMPLE_QUERIES = [
 ];
 import { useAuth } from '../context/AuthContext';
 
-export default function CorpusStudio({ userMeetings, provider }) {
+export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings }) {
   const { authFetch } = useAuth();
+  const fileInputRef = React.useRef(null);
   const [question, setQuestion] = useState(SAMPLE_QUERIES[0]);
   const [loading, setLoading] = useState(false);
   const [indexing, setIndexing] = useState(false);
   const [result, setResult] = useState(null);
-  
+
   // Meeting Filter & Selection State
   const [selectedMeetings, setSelectedMeetings] = useState(
     () => new Set((userMeetings || []).map(m => m.id))
@@ -46,7 +47,7 @@ export default function CorpusStudio({ userMeetings, provider }) {
   };
 
   // Filtered list of meetings based on search input
-  const filteredMeetings = (userMeetings || []).filter(m => 
+  const filteredMeetings = (userMeetings || []).filter(m =>
     m.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
     m.id.toLowerCase().includes(searchFilter.toLowerCase())
   );
@@ -61,9 +62,9 @@ export default function CorpusStudio({ userMeetings, provider }) {
     try {
       const res = await authFetch('/api/corpus/ask', {
         method: 'POST',
-        body: JSON.stringify({ 
-          question, 
-          provider, 
+        body: JSON.stringify({
+          question,
+          provider,
           k: 5,
           selected_meetings: Array.from(selectedMeetings)
         }),
@@ -95,9 +96,35 @@ export default function CorpusStudio({ userMeetings, provider }) {
     }
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const title = file.name.replace(/\.[^/.]+$/, "");
+      try {
+        const res = await authFetch('/api/meetings', {
+          method: 'POST',
+          body: JSON.stringify({ title, transcript_text: text }),
+        });
+        if (res.ok) {
+          await fetchUserMeetings?.();
+          const json = await res.json();
+          // Auto-select the newly uploaded meeting
+          setSelectedMeetings(prev => new Set(prev).add(json.id));
+        }
+      } catch (err) {
+        console.error("Failed to upload meeting", err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // reset
+  };
+
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1550px', margin: '0 auto' }}>
-      
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
@@ -111,20 +138,37 @@ export default function CorpusStudio({ userMeetings, provider }) {
           </p>
         </div>
 
-        <button 
-          onClick={handleRebuildCorpus} 
-          disabled={indexing} 
-          className="btn btn-secondary btn-sm"
-          style={{ gap: '6px' }}
-        >
-          <RefreshCw size={13} style={indexing ? { animation: 'spin 1s linear infinite' } : {}} />
-          <span>{indexing ? 'Re-indexing Archive...' : 'Re-index Meeting Files'}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input
+            type="file"
+            accept=".txt"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn btn-primary btn-sm"
+            style={{ gap: '6px' }}
+          >
+            <span>Upload & Select Transcript</span>
+          </button>
+
+          <button
+            onClick={handleRebuildCorpus}
+            disabled={indexing}
+            className="btn btn-secondary btn-sm"
+            style={{ gap: '6px' }}
+          >
+            <RefreshCw size={13} style={indexing ? { animation: 'spin 1s linear infinite' } : {}} />
+            <span>{indexing ? 'Re-indexing Archive...' : 'Re-index Meeting Files'}</span>
+          </button>
+        </div>
       </div>
 
       {/* ══ INTERACTIVE ARCHIVE SELECTOR SHELF ══ */}
       <div className="glass-panel" style={{ padding: '20px', marginBottom: '24px' }}>
-        
+
         {/* Shelf Toolbar: Title, Filter, Select All / None */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -166,12 +210,12 @@ export default function CorpusStudio({ userMeetings, provider }) {
                 key={m.id}
                 onClick={() => toggleMeeting(m.id)}
                 style={{
-                  background: isSelected ? 'rgba(99, 102, 241, 0.09)' : 'rgba(255, 255, 255, 0.02)', 
+                  background: isSelected ? 'rgba(99, 102, 241, 0.09)' : 'rgba(255, 255, 255, 0.02)',
                   border: `1px solid ${isSelected ? 'rgba(99, 102, 241, 0.45)' : 'var(--border-subtle)'}`,
-                  borderRadius: 'var(--radius-md)', 
+                  borderRadius: 'var(--radius-md)',
                   padding: '12px 14px',
-                  display: 'flex', 
-                  alignItems: 'center', 
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '10px',
                   cursor: 'pointer',
@@ -183,13 +227,13 @@ export default function CorpusStudio({ userMeetings, provider }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                   {/* Custom Checkbox */}
                   <div style={{
-                    width: '18px', 
-                    height: '18px', 
+                    width: '18px',
+                    height: '18px',
                     borderRadius: '5px',
                     border: `1.5px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.25)'}`,
                     background: isSelected ? '#6366f1' : 'transparent',
-                    display: 'flex', 
-                    alignItems: 'center', 
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     transition: 'all 0.18s ease'
@@ -198,9 +242,9 @@ export default function CorpusStudio({ userMeetings, provider }) {
                   </div>
 
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ 
-                      fontSize: '0.84rem', 
-                      fontWeight: 700, 
+                    <div style={{
+                      fontSize: '0.84rem',
+                      fontWeight: 700,
                       color: isSelected ? '#ffffff' : 'var(--text-muted)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -255,10 +299,10 @@ export default function CorpusStudio({ userMeetings, provider }) {
             />
           </div>
 
-          <button 
-            onClick={handleAskCorpus} 
-            disabled={loading || !question.trim() || selectedMeetings.size === 0} 
-            className="btn btn-primary" 
+          <button
+            onClick={handleAskCorpus}
+            disabled={loading || !question.trim() || selectedMeetings.size === 0}
+            className="btn btn-primary"
             style={{ minWidth: '200px' }}
           >
             {loading ? 'Synthesizing Corpus...' : <><Sparkles size={16} /> Query {selectedMeetings.size} Meetings</>}
@@ -269,10 +313,10 @@ export default function CorpusStudio({ userMeetings, provider }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 700 }}>Try Query:</span>
           {SAMPLE_QUERIES.map((sq, idx) => (
-            <button 
-              key={idx} 
-              onClick={() => setQuestion(sq)} 
-              className="btn btn-secondary btn-xs" 
+            <button
+              key={idx}
+              onClick={() => setQuestion(sq)}
+              className="btn btn-secondary btn-xs"
               style={{ fontSize: '0.72rem' }}
             >
               {sq}
@@ -283,7 +327,7 @@ export default function CorpusStudio({ userMeetings, provider }) {
 
       {/* Results View */}
       {result && (
-        <div 
+        <div
           className="responsive-2col"
           style={{ display: 'grid', gridTemplateColumns: 'minmax(420px, 1.4fr) minmax(340px, 1fr)', gap: '24px', alignItems: 'start' }}
         >
@@ -330,14 +374,14 @@ export default function CorpusStudio({ userMeetings, provider }) {
                   </span>
                 </div>
                 <div style={{
-                  fontSize: '0.78rem', 
-                  fontFamily: 'var(--font-mono)', 
+                  fontSize: '0.78rem',
+                  fontFamily: 'var(--font-mono)',
                   color: '#cbd5e1',
-                  background: 'rgba(0, 0, 0, 0.4)', 
+                  background: 'rgba(0, 0, 0, 0.4)',
                   padding: '10px 12px',
-                  borderRadius: 'var(--radius-sm)', 
-                  lineHeight: 1.5, 
-                  maxHeight: '130px', 
+                  borderRadius: 'var(--radius-sm)',
+                  lineHeight: 1.5,
+                  maxHeight: '130px',
                   overflowY: 'auto'
                 }}>
                   "{src.excerpt}"
@@ -371,7 +415,7 @@ export default function CorpusStudio({ userMeetings, provider }) {
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>{previewMeeting.title}</h3>
                 <span className="badge badge-primary">{previewMeeting.turn_count} turns</span>
               </div>
-              <button 
+              <button
                 onClick={() => setPreviewMeeting(null)}
                 className="btn btn-secondary btn-xs"
               >
