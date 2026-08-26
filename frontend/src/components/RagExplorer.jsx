@@ -132,7 +132,7 @@ export default function RagExplorer({ userMeetings }) {
               {/* Score header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--cyan-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', color: '#ffffff' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.8rem', color: '#ffffff' }}>
                     #{idx + 1}
                   </div>
                   <span style={{ fontSize: '0.92rem', fontWeight: 700 }}>Vector Match Rank {idx + 1}</span>
@@ -144,7 +144,7 @@ export default function RagExplorer({ userMeetings }) {
                     Cosine Score: <strong style={{ color: '#67e8f9' }}>{res.score.toFixed(3)}</strong>
                   </span>
                   <div style={{ width: '120px', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(100, Math.max(0, res.score * 100))}%`, height: '100%', background: 'var(--cyan-gradient)' }} />
+                    <div style={{ width: `${Math.min(100, Math.max(0, res.score * 100))}%`, height: '100%', background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)' }} />
                   </div>
                 </div>
               </div>

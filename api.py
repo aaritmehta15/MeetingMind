@@ -74,6 +74,9 @@ class MeetingCreate(BaseModel):
     title: str
     transcript_text: str
 
+class MeetingRename(BaseModel):
+    title: str
+
 class ExtractRequest(BaseModel):
     transcript: str | None = None
     meeting_id: int | None = None
@@ -99,7 +102,7 @@ class CorpusAskRequest(BaseModel):
     question: str
     provider: str = "groq"
     k: int = 5
-    selected_meetings: list[str] | None = None
+    selected_meetings: list[int] | None = None
 
 class AnalyzeRequest(BaseModel):
     transcript: str | None = None
@@ -176,6 +179,15 @@ def create_meeting(meeting: MeetingCreate, current_user: User = Depends(get_curr
     db.commit()
     db.refresh(new_meeting)
     return {"id": new_meeting.id, "title": new_meeting.title, "message": "Meeting saved successfully"}
+
+@app.patch("/api/meetings/{meeting_id}")
+def rename_meeting(meeting_id: int, req: MeetingRename, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    m = db.query(Meeting).filter(Meeting.id == meeting_id, Meeting.user_id == current_user.id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    m.title = req.title
+    db.commit()
+    return {"id": m.id, "title": m.title, "message": "Meeting renamed successfully"}
 
 @app.delete("/api/meetings/{meeting_id}")
 def delete_meeting(meeting_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -425,21 +437,38 @@ def api_corpus_build(req: CorpusBuildRequest, current_user: User = Depends(get_c
 
 
 @app.post("/api/corpus/ask")
-def api_corpus_ask(req: CorpusAskRequest, current_user: User = Depends(get_current_user)):
+def api_corpus_ask(req: CorpusAskRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     start_t = time.perf_counter()
     try:
+        from corpus import CorpusIndex, corpus_ask
+        corp = CorpusIndex()
+        
+        # Fetch the selected meetings from DB
+        meetings = db.query(Meeting).filter(
+            Meeting.user_id == current_user.id,
+            Meeting.id.in_(req.selected_meetings)
+        ).all()
+        
+        if not meetings:
+            raise ValueError("No matching meetings found for corpus search.")
+            
+        for m in meetings:
+            corp.add_transcript_text(m.transcript_text, source_name=f"{m.title}.txt", meeting_id=str(m.id))
+            
+        if not corp._chunks:
+            raise ValueError("No transcript data available to build corpus.")
+            
+        corp.build_index()
+
         answer = corpus_ask(
             req.question,
             provider=req.provider,
             k=req.k,
-            selected_meetings=req.selected_meetings
+            selected_meetings=[str(m.id) for m in meetings],
+            corp=corp
         )
         
-        # Load corpus to return the exact sources used
-        from corpus import CorpusIndex
-        corp = CorpusIndex()
-        corp.load(Path("corpus"))
-        sources = corp.search(req.question, k=req.k, selected_meetings=req.selected_meetings)
+        sources = corp.search(req.question, k=req.k, selected_meetings=[str(m.id) for m in meetings])
         
         source_out = []
         for s in sources:

@@ -108,7 +108,7 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
 
   const loadMeeting = (m) => {
     setActiveExample(m.id);
-    setTranscript(m.text);
+    setTranscript(m.text || m.transcript_text || '');
     setResult(null);
     setIsPlaying(false);
     setCurrentPlaybackTurn(0);
@@ -208,30 +208,24 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
     }
   };
 
-  // Generate Follow-up Email Template
-  const generateFollowupEmail = () => {
+  // Generate Follow-up Email Templates
+  const generateFollowupEmail = (type = 'executive') => {
     if (!result) return '';
     const actions = result.action_items.map(a => `• ${a.description} (Owner: ${a.owner || 'Unassigned'}${a.deadline ? ` | Due: ${a.deadline}` : ''})`).join('\n');
     const decisions = result.decisions.map(d => `• ${d.description}`).join('\n');
-    return `Subject: Meeting Summary & Action Items: ${activeExample ? activeExample.replace(/-/g, ' ') : 'Sync Session'}
-
-Hi Team,
-
-Thank you for your time during today's meeting. Here is a summary of our discussion and key takeaways:
-
-📋 Executive Summary:
-${result.summary}
-
-✅ Key Decisions Agreed:
-${decisions || '• No explicit formal decisions recorded.'}
-
-🚀 Action Items & Commitments:
-${actions || '• No action items recorded.'}
-
-Please review your respective commitments and let the team know if any adjustments are needed.
-
-Best regards,
-MeetingMind Intelligence Engine`;
+    const meetingTitle = activeExample ? userMeetings?.find(m => m.id === activeExample)?.title : null;
+    const title = meetingTitle || 'Sync Session';
+    
+    if (type === 'executive') {
+      return `Subject: Meeting Summary & Action Items: ${title}\n\nHi Team,\n\nThank you for your time during today's meeting. Here is a summary of our discussion and key takeaways:\n\n📋 Executive Summary:\n${result.summary}\n\n✅ Key Decisions Agreed:\n${decisions || '• No explicit formal decisions recorded.'}\n\n🚀 Action Items & Commitments:\n${actions || '• No action items recorded.'}\n\nPlease review your respective commitments and let the team know if any adjustments are needed.\n\nBest regards,\nMeetingMind Intelligence Engine`;
+    } 
+    else if (type === 'action') {
+      return `Subject: Action Required: Tasks from ${title}\n\nTeam,\n\nPlease see the action items captured from our recent meeting. I need everyone to review their assigned tasks below and ensure they are completed by the respective deadlines.\n\n🚀 Action Items:\n${actions || '• No action items recorded.'}\n\nPlease reply to this thread if you have any blockers.\n\nThanks,\nMeetingMind`;
+    }
+    else if (type === 'client') {
+      return `Subject: Following up on our meeting: ${title}\n\nHi [Client Name],\n\nIt was great speaking with you today. I'm sharing a brief recap of what we discussed to ensure we're fully aligned on the next steps.\n\nOverview:\n${result.summary}\n\nDecisions made:\n${decisions || '• We agreed to review the outstanding items offline.'}\n\nOur next steps:\n${actions || '• We will reach out shortly with further updates.'}\n\nIf anything was missed, please don't hesitate to let me know.\n\nBest regards,\n[Your Name]`;
+    }
+    return '';
   };
 
   // Generate Jira Tickets
@@ -342,7 +336,7 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Raw Input Transcript
               </span>
-              {!activeExample && transcript.trim() && (
+              {!activeExample && (transcript || '').trim() && (
                 <button onClick={handleSavePasted} className="btn btn-primary btn-xs" style={{ padding: '4px 10px', fontSize: '0.7rem' }}>
                   Save to My Meetings
                 </button>
@@ -495,29 +489,12 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
               )}
             </div>
 
-            {/* Raw Textarea toggle & statistics */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 600 }}>Raw Transcript Input:</span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
-                  💬 {parsedTurns.length} turns • 📝 {transcript.trim().split(/\s+/).filter(Boolean).length} words
-                </span>
-              </div>
-              <textarea
-                className="textarea-field"
-                style={{ height: '90px', width: '100%', fontSize: '0.75rem' }}
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                placeholder="Or edit / paste raw dialogue text directly here..."
-              />
-            </div>
-
             {/* Main Action Button */}
             <button
               className="btn btn-primary"
               style={{ padding: '14px', fontSize: '0.95rem', width: '100%', gap: '10px' }}
               onClick={handleExtract}
-              disabled={loading || !transcript.trim()}
+              disabled={loading || !(transcript || '').trim()}
             >
               {loading ? (
                 <><Loader2 className="animate-spin" size={18} /> Validating Pydantic Schema &amp; Citation Guard...</>
@@ -782,32 +759,53 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
 
               {/* VIEW 2: FOLLOW-UP EMAIL */}
               {actionTab === 'email' && (
-                <div className="glass-panel" style={{ padding: '24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Mail size={15} /> Executive Follow-Up Email
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  
+                  {/* Executive Email */}
+                  <div className="glass-panel" style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#818cf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Mail size={15} /> Internal Executive Summary
+                      </div>
+                      <button onClick={() => handleCopy(generateFollowupEmail('executive'), 'email_copy_exec')} className="btn btn-primary btn-xs">
+                        {copiedKey === 'email_copy_exec' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleCopy(generateFollowupEmail(), 'email_copy')}
-                      className="btn btn-primary btn-xs"
-                    >
-                      {copiedKey === 'email_copy' ? <Check size={12} /> : <Copy size={12} />}
-                      <span>{copiedKey === 'email_copy' ? 'Copied!' : 'Copy Email'}</span>
-                    </button>
+                    <pre style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', lineHeight: 1.6, color: '#e2e8f0', whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.35)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      {generateFollowupEmail('executive')}
+                    </pre>
                   </div>
-                  <pre style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.85rem',
-                    lineHeight: 1.6,
-                    color: '#e2e8f0',
-                    whiteSpace: 'pre-wrap',
-                    background: 'rgba(0,0,0,0.35)',
-                    padding: '16px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-subtle)'
-                  }}>
-                    {generateFollowupEmail()}
-                  </pre>
+
+                  {/* Action-Oriented Email */}
+                  <div className="glass-panel" style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CheckSquare size={15} /> Action Items Only (Internal)
+                      </div>
+                      <button onClick={() => handleCopy(generateFollowupEmail('action'), 'email_copy_action')} className="btn btn-primary btn-xs">
+                        {copiedKey === 'email_copy_action' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
+                      </button>
+                    </div>
+                    <pre style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', lineHeight: 1.6, color: '#e2e8f0', whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.35)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      {generateFollowupEmail('action')}
+                    </pre>
+                  </div>
+
+                  {/* Client Email */}
+                  <div className="glass-panel" style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                      <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Mail size={15} /> Client / External Follow-up
+                      </div>
+                      <button onClick={() => handleCopy(generateFollowupEmail('client'), 'email_copy_client')} className="btn btn-primary btn-xs">
+                        {copiedKey === 'email_copy_client' ? <Check size={12} /> : <Copy size={12} />} <span>Copy</span>
+                      </button>
+                    </div>
+                    <pre style={{ fontFamily: 'var(--font-sans)', fontSize: '0.85rem', lineHeight: 1.6, color: '#e2e8f0', whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.35)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                      {generateFollowupEmail('client')}
+                    </pre>
+                  </div>
+
                 </div>
               )}
 

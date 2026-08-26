@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Layers, Database, RefreshCw, FileText, CheckCircle2, Search,
-  Sparkles, BookOpen, Quote, CheckSquare, Square, Filter, Eye, X, AlertTriangle
+  Sparkles, BookOpen, Quote, CheckSquare, Square, Filter, Eye, X, AlertTriangle, Edit2, Trash2
 } from 'lucide-react';
 
 const SAMPLE_QUERIES = [
@@ -70,7 +70,10 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Corpus query failed');
+      if (!res.ok) {
+        const errorMsg = typeof data.detail === 'object' ? JSON.stringify(data.detail) : data.detail;
+        throw new Error(errorMsg || 'Corpus query failed');
+      }
       setResult(data);
     } catch (err) {
       alert('Error querying corpus: ' + err.message);
@@ -120,6 +123,38 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
     };
     reader.readAsText(file);
     e.target.value = null; // reset
+  };
+
+  const handleRename = async (id, currentTitle) => {
+    const newTitle = window.prompt("Enter new title for this meeting:", currentTitle);
+    if (!newTitle || newTitle === currentTitle) return;
+    try {
+      const res = await authFetch(`/api/meetings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (res.ok) await fetchUserMeetings?.();
+      else alert("Failed to rename meeting.");
+    } catch (err) {
+      alert("Error renaming meeting.");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this meeting?")) return;
+    try {
+      const res = await authFetch(`/api/meetings/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await fetchUserMeetings?.();
+        setSelectedMeetings(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    } catch (err) {
+      alert("Error deleting meeting.");
+    }
   };
 
   return (
@@ -258,18 +293,33 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
                   </div>
                 </div>
 
-                {/* Preview transcript action */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPreviewMeeting(m);
-                  }}
-                  className="btn btn-secondary btn-xs"
-                  style={{ padding: '3px 6px', color: 'var(--text-dim)' }}
-                  title="Preview Transcript"
-                >
-                  <Eye size={12} />
-                </button>
+                {/* Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setPreviewMeeting(m); }}
+                    className="btn btn-secondary btn-xs"
+                    style={{ padding: '4px', color: 'var(--text-dim)' }}
+                    title="Preview Transcript"
+                  >
+                    <Eye size={12} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleRename(m.id, m.title); }}
+                    className="btn btn-secondary btn-xs"
+                    style={{ padding: '4px', color: 'var(--text-dim)' }}
+                    title="Rename Meeting"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
+                    className="btn btn-secondary btn-xs"
+                    style={{ padding: '4px', color: '#fb7185', borderColor: 'transparent' }}
+                    title="Delete Meeting"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
             );
           })}

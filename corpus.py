@@ -73,6 +73,25 @@ class CorpusIndex:
 
         return idx.num_chunks
 
+    def add_transcript_text(self, text: str, source_name: str, meeting_id: str, window_size: int = 5) -> int:
+        from rag_index import HierarchicalRAGIndex
+
+        if not text.strip():
+            return 0
+
+        idx = HierarchicalRAGIndex(window_size=window_size)
+        idx.build(text)
+
+        for i in range(idx.num_chunks):
+            self._chunks.append({
+                "text": idx._parents[i],
+                "child": idx._children[i],
+                "source": source_name,
+                "meeting": meeting_id,
+            })
+
+        return idx.num_chunks
+
     def build_index(self) -> None:
         """Build the FAISS index over all added chunks."""
         import faiss
@@ -186,6 +205,7 @@ def corpus_ask(
     provider: str = "groq",
     k: int = 5,
     selected_meetings: list[str] | None = None,
+    corp: CorpusIndex | None = None,
 ) -> str:
     """Ask a question across indexed meetings.
 
@@ -204,8 +224,9 @@ def corpus_ask(
     """
     from llm import call_llm
 
-    corp = CorpusIndex()
-    corp.load(corpus_dir)
+    if corp is None:
+        corp = CorpusIndex()
+        corp.load(corpus_dir)
 
     results = corp.search(question, k=k, selected_meetings=selected_meetings)
     if not results:
