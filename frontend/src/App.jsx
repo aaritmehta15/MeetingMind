@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('studio');
-  const [provider, setProvider] = useState('groq');
+  const [provider, setProvider] = useState('gemini');
   const [status, setStatus] = useState(null);
   const [examples, setExamples] = useState([]);
   const [loading, setLoading] = useState(true);

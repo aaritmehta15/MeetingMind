@@ -108,7 +108,7 @@ def _call_gemini(system_prompt: str, user_message: str) -> str:
     from google.genai import types
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
     resp = client.models.generate_content(
         model=model,
@@ -118,7 +118,11 @@ def _call_gemini(system_prompt: str, user_message: str) -> str:
             max_output_tokens=2048,
         ),
     )
-    return resp.text
+    if resp.text:
+        return resp.text
+    if resp.candidates and resp.candidates[0].content and resp.candidates[0].content.parts:
+        return "".join(p.text for p in resp.candidates[0].content.parts if hasattr(p, "text") and p.text)
+    return ""
 
 
 def _call_gemini_json(system_prompt: str, user_message: str) -> str:
@@ -127,7 +131,7 @@ def _call_gemini_json(system_prompt: str, user_message: str) -> str:
     from google.genai import types
 
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    model = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
     resp = client.models.generate_content(
         model=model,
@@ -138,7 +142,11 @@ def _call_gemini_json(system_prompt: str, user_message: str) -> str:
             max_output_tokens=2048,
         ),
     )
-    return resp.text
+    if resp.text:
+        return resp.text
+    if resp.candidates and resp.candidates[0].content and resp.candidates[0].content.parts:
+        return "".join(p.text for p in resp.candidates[0].content.parts if hasattr(p, "text") and p.text)
+    return "{}"
 
 
 # ── Ollama (fully local, no API key) ────────────────────────────────────────
