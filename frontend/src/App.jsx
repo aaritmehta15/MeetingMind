@@ -3,6 +3,7 @@ import Header from './components/Header';
 import Navigation from './components/Navigation';
 import ExtractionStudio from './components/ExtractionStudio';
 import QueryHub from './components/QueryHub';
+import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('studio');
@@ -24,20 +25,28 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>
+      {/* SaaS Navigation Header */}
       <Header status={status} provider={provider} onProviderChange={setProvider} />
+      
+      {/* 2-Tab Main Navigation */}
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main style={{ flex: 1, paddingBottom: '40px' }}>
+      {/* Main Workspace Area */}
+      <main style={{ flex: 1, paddingBottom: '50px' }}>
         {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '480px', gap: '16px' }}>
             <div style={{
-              width: '36px', height: '36px',
-              border: '3px solid rgba(255,255,255,0.08)',
+              width: '42px', 
+              height: '42px',
+              border: '3px solid rgba(99, 102, 241, 0.15)',
               borderTopColor: '#6366f1',
               borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
+              animation: 'spin 0.8s linear infinite'
             }} />
+            <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              Connecting to MeetingMind Engine...
+            </span>
           </div>
         ) : (
           <>
@@ -47,25 +56,28 @@ export default function App() {
         )}
       </main>
 
+      {/* Modern Compact Footer */}
       <footer style={{
         borderTop: '1px solid var(--border-subtle)',
-        padding: '14px 28px',
-        background: 'rgba(6,9,17,0.95)',
-        fontSize: '0.775rem',
+        padding: '16px 28px',
+        background: 'rgba(6, 8, 15, 0.95)',
+        fontSize: '0.78rem',
         color: 'var(--text-dim)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '10px'
+        gap: '12px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 6px #10b981' }} />
-          <span>MeetingMind Intelligence Engine</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
+          <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>MeetingMind Engine Active</span>
           <span style={{ color: 'rgba(255,255,255,0.15)' }}>•</span>
-          <span>FastAPI + Vite React + FAISS-CPU + Pydantic v2</span>
+          <span>FastAPI + Vite React + FAISS-CPU + Pydantic v2 + ReAct Agent</span>
         </div>
-        <div>Generative AI Laboratory Final Project — B.Tech (AI &amp; Data Science)</div>
+        <div style={{ color: 'var(--text-muted)' }}>
+          Generative AI Laboratory — B.Tech (AI &amp; Data Science)
+        </div>
       </footer>
     </div>
   );
