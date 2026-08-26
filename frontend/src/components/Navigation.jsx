@@ -4,10 +4,7 @@ import { Sparkles, Search, Bot, Layers, BarChart3 } from 'lucide-react';
 export default function Navigation({ activeTab, onTabChange }) {
   const tabs = [
     { id: 'studio', label: 'Extraction Studio', icon: Sparkles, badge: 'Live Pipeline' },
-    { id: 'rag', label: 'Hierarchical RAG', icon: Search, badge: 'Child->Parent' },
-    { id: 'agent', label: 'ReAct Agent', icon: Bot, badge: 'Multi-Step' },
-    { id: 'corpus', label: 'Cross-Meeting Corpus', icon: Layers, badge: 'Multi-Doc' },
-    { id: 'benchmark', label: 'AMI Benchmark Hub', icon: BarChart3, badge: '0% Hallucination' },
+    { id: 'intelligence', label: 'Intelligence Modes', icon: Bot, badge: 'RAG / ReAct / Corpus' },
   ];
 
   return (

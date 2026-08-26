@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Navigation from './components/Navigation';
 import ExtractionStudio from './components/ExtractionStudio';
-import RagExplorer from './components/RagExplorer';
-import AgentChat from './components/AgentChat';
-import CorpusStudio from './components/CorpusStudio';
-import BenchmarkHub from './components/BenchmarkHub';
+import QueryHub from './components/QueryHub';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('studio');
@@ -44,11 +41,8 @@ export default function App() {
           </div>
         ) : (
           <>
-            {activeTab === 'studio'    && <ExtractionStudio examples={examples} provider={provider} />}
-            {activeTab === 'rag'       && <RagExplorer examples={examples} />}
-            {activeTab === 'agent'     && <AgentChat examples={examples} provider={provider} />}
-            {activeTab === 'corpus'    && <CorpusStudio examples={examples} provider={provider} />}
-            {activeTab === 'benchmark' && <BenchmarkHub />}
+            {activeTab === 'studio'       && <ExtractionStudio examples={examples} provider={provider} />}
+            {activeTab === 'intelligence' && <QueryHub examples={examples} provider={provider} />}
           </>
         )}
       </main>
