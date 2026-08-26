@@ -44,6 +44,7 @@ class CorpusAskRequest(BaseModel):
     question: str
     provider: str = "groq"
     k: int = 5
+    selected_meetings: list[str] | None = None
 
 
 @app.get("/api/status")
@@ -170,13 +171,18 @@ def api_corpus_build(req: CorpusBuildRequest):
 def api_corpus_ask(req: CorpusAskRequest):
     start_t = time.perf_counter()
     try:
-        answer = corpus_ask(req.question, provider=req.provider, k=req.k)
+        answer = corpus_ask(
+            req.question,
+            provider=req.provider,
+            k=req.k,
+            selected_meetings=req.selected_meetings
+        )
         
         # Load corpus to return the exact sources used
         from corpus import CorpusIndex
         corp = CorpusIndex()
         corp.load(Path("corpus"))
-        sources = corp.search(req.question, k=req.k)
+        sources = corp.search(req.question, k=req.k, selected_meetings=req.selected_meetings)
         
         source_out = []
         for s in sources:

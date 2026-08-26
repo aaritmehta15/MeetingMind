@@ -88,8 +88,13 @@ class CorpusIndex:
         self._index = faiss.IndexFlatIP(self.EMBEDDING_DIM)
         self._index.add(vecs)
 
-    def search(self, query: str, k: int = 5) -> list[dict]:
-        """Search across all meetings for relevant context windows.
+    def search(self, query: str, k: int = 5, selected_meetings: list[str] | None = None) -> list[dict]:
+        """Search across meetings for relevant context windows.
+
+        Args:
+            query: Natural language search query.
+            k: Maximum number of results to return.
+            selected_meetings: Optional list of meeting filenames/stems to filter by.
 
         Returns:
             List of dicts with keys: text, source, meeting, score.
@@ -101,9 +106,13 @@ class CorpusIndex:
         if self._index is None:
             raise RuntimeError("Index not built. Call build_index() first.")
 
-        k_capped = min(k, len(self._chunks))
+        # If filtering, search a larger candidate pool to ensure we find enough matching chunks
+        fetch_k = len(self._chunks) if selected_meetings else min(k * 3, len(self._chunks))
+        if fetch_k == 0:
+            return []
+
         q_vec = _embed([query])
-        scores, indices = self._index.search(q_vec, k_capped)
+        scores, indices = self._index.search(q_vec, fetch_k)
 
         results = []
         for score, idx in zip(scores[0], indices[0]):
@@ -111,7 +120,20 @@ class CorpusIndex:
                 continue
             chunk = self._chunks[idx].copy()
             chunk["score"] = float(score)
+            
+            # Apply meeting filter if specified
+            if selected_meetings is not None:
+                meeting_match = (
+                    chunk["meeting"] in selected_meetings or
+                    chunk["source"] in selected_meetings or
+                    any(m.replace('.txt', '') == chunk["meeting"] for m in selected_meetings)
+                )
+                if not meeting_match:
+                    continue
+
             results.append(chunk)
+            if len(results) >= k:
+                break
         return results
 
     def save(self, corpus_dir: Path) -> None:
@@ -163,8 +185,9 @@ def corpus_ask(
     corpus_dir: Path = Path("corpus"),
     provider: str = "groq",
     k: int = 5,
+    selected_meetings: list[str] | None = None,
 ) -> str:
-    """Ask a question across all indexed meetings.
+    """Ask a question across indexed meetings.
 
     Retrieves the top-k context windows, then calls the LLM with a
     synthesis prompt to generate a grounded, cross-meeting answer.
@@ -174,6 +197,7 @@ def corpus_ask(
         corpus_dir: Directory of the saved corpus.
         provider: LLM provider.
         k: Number of chunks to retrieve.
+        selected_meetings: Optional list of meeting filenames to restrict search to.
 
     Returns:
         Answer string with meeting citations.
@@ -183,9 +207,9 @@ def corpus_ask(
     corp = CorpusIndex()
     corp.load(corpus_dir)
 
-    results = corp.search(question, k=k)
+    results = corp.search(question, k=k, selected_meetings=selected_meetings)
     if not results:
-        return "No relevant context found in the corpus."
+        return "No relevant context found in the selected meetings."
 
     # Build context block with source labels
     context_parts = []
