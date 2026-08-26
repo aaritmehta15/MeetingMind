@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Brain, Send, ChevronDown, ChevronRight, Search, Zap, Globe, Calculator, 
   FileText, List, Sparkles, CheckCircle2, RotateCcw, AlertTriangle, 
-  Layers, Terminal, Cpu, Clock, Activity, MessageSquare, Play
+  Layers, Terminal, Cpu, Clock, Activity, MessageSquare, Play,
+  Smile, Users, Calendar, Hash, ShieldCheck
 } from 'lucide-react';
 
 const ALL_TOOLS = [
@@ -10,7 +11,7 @@ const ALL_TOOLS = [
     id: 'rag_search',
     name: 'RAG Search',
     icon: Search,
-    color: '#818cf8',
+    color: '#14b8a6',
     description: 'Semantically searches the transcript for relevant dialogue passages.',
     badge: 'Vector Index',
     badgeClass: 'badge-primary',
@@ -19,7 +20,7 @@ const ALL_TOOLS = [
     id: 'get_extraction',
     name: 'Structured Extraction',
     icon: FileText,
-    color: '#06b6d4',
+    color: '#0ea5e9',
     description: 'Runs schema pipeline to retrieve verified tasks and decisions.',
     badge: 'Pipeline',
     badgeClass: 'badge-cyan',
@@ -28,16 +29,16 @@ const ALL_TOOLS = [
     id: 'get_summary',
     name: 'Meeting Summary',
     icon: List,
-    color: '#a5b4fc',
+    color: '#38bdf8',
     description: 'Generates an executive 2–3 sentence meeting overview.',
     badge: 'Overview',
-    badgeClass: 'badge-primary',
+    badgeClass: 'badge-cyan',
   },
   {
     id: 'calculator',
     name: 'Calculator',
     icon: Calculator,
-    color: '#fbbf24',
+    color: '#f59e0b',
     description: 'Safely evaluates arithmetic expressions (budgets, timelines, totals).',
     badge: 'Pure Python',
     badgeClass: 'badge-amber',
@@ -46,16 +47,65 @@ const ALL_TOOLS = [
     id: 'web_search',
     name: 'Web Search',
     icon: Globe,
-    color: '#34d399',
+    color: '#10b981',
     description: 'Live DuckDuckGo search for external entities, clients, or companies.',
     badge: 'Live Web',
+    badgeClass: 'badge-verified',
+  },
+  {
+    id: 'sentiment_analyzer',
+    name: 'Sentiment Analyzer',
+    icon: Smile,
+    color: '#ec4899',
+    description: 'VADER NLP emotional tone analysis per-speaker + overall meeting mood.',
+    badge: 'Local NLP',
+    badgeClass: 'badge-orange',
+  },
+  {
+    id: 'speaker_stats',
+    name: 'Speaker Participation',
+    icon: Users,
+    color: '#8b5cf6',
+    description: 'Calculates talk-time share %, turn counts, questions asked, and dominance.',
+    badge: 'Analytics',
+    badgeClass: 'badge-primary',
+  },
+  {
+    id: 'timeline_extractor',
+    name: 'Timeline & Deadlines',
+    icon: Calendar,
+    color: '#f97316',
+    description: 'Regex pattern engine extracting all dates, deadlines, and time references.',
+    badge: 'Pattern Engine',
+    badgeClass: 'badge-orange',
+  },
+  {
+    id: 'keyword_frequency',
+    name: 'Keyword Frequency',
+    icon: Hash,
+    color: '#06b6d4',
+    description: 'Statistical TF keyword ranking and top recurring 2-word phrase counter.',
+    badge: 'Stat NLP',
+    badgeClass: 'badge-cyan',
+  },
+  {
+    id: 'citation_checker',
+    name: 'Citation Guard',
+    icon: ShieldCheck,
+    color: '#10b981',
+    description: 'Verbatim substring and sliding window overlap hallucination validator.',
+    badge: 'Zero-Hallucination',
     badgeClass: 'badge-verified',
   },
 ];
 
 const SAMPLE_QUESTIONS = [
+  "Analyze the sentiment and emotional tone of each speaker in this meeting.",
+  "Show me speaker participation stats: who spoke the most and who asked the most questions?",
+  "Extract all deadlines and create a chronological timeline for this meeting.",
+  "What were the top recurring keywords and phrases discussed?",
+  "Verify if the claim 'Edd agreed to finish the budget by Friday' is grounded in the transcript.",
   "What did Edd commit to do, and by when?",
-  "Who owns the roadmap decision?",
   "If the Q3 budget is $50,000 and we spent $12,500, calculate remaining %.",
   "Who is Heinz as a company? Search the web.",
 ];
@@ -129,35 +179,20 @@ export default function AgentChat({ examples, provider }) {
     setTestLoading(true);
     setTestResult(null);
     try {
-      if (testTool === 'calculator') {
-        const res = await fetch('/api/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transcript: 'dummy meeting',
-            question: `Calculate: ${testInput}`,
-            provider,
-            enabled_tools: ['calculator'],
-          }),
-        });
-        const data = await res.json();
-        setTestResult(data.answer);
-      } else if (testTool === 'web_search') {
-        const res = await fetch('/api/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transcript: 'dummy meeting',
-            question: `Search web: ${testInput}`,
-            provider,
-            enabled_tools: ['web_search'],
-          }),
-        });
-        const data = await res.json();
-        setTestResult(data.answer);
-      } else {
-        setTestResult('Tool test ready.');
-      }
+      const activeTranscript = transcript || (examples && examples[0]?.text) || 'Speaker: Sample meeting text.';
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: activeTranscript,
+          question: `Use the ${testTool} tool to: ${testInput}`,
+          provider,
+          enabled_tools: [testTool],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Tool test failed');
+      setTestResult(data.answer || JSON.stringify(data, null, 2));
     } catch (err) {
       setTestResult('Error testing tool: ' + err.message);
     } finally {
@@ -558,7 +593,37 @@ export default function AgentChat({ examples, provider }) {
                 Test individual tools directly to see raw responses without executing the entire multi-step agent.
               </p>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => { setTestTool('sentiment_analyzer'); setTestInput('Analyze sentiment of all speakers'); }}
+                  className={`btn btn-xs ${testTool === 'sentiment_analyzer' ? 'btn-cta' : 'btn-secondary'}`}
+                >
+                  <Smile size={12} /> Sentiment (VADER)
+                </button>
+                <button
+                  onClick={() => { setTestTool('speaker_stats'); setTestInput('Compute speaker participation breakdown'); }}
+                  className={`btn btn-xs ${testTool === 'speaker_stats' ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  <Users size={12} /> Speaker Stats
+                </button>
+                <button
+                  onClick={() => { setTestTool('timeline_extractor'); setTestInput('Extract all deadlines and time mentions'); }}
+                  className={`btn btn-xs ${testTool === 'timeline_extractor' ? 'btn-cyan' : 'btn-secondary'}`}
+                >
+                  <Calendar size={12} /> Timeline
+                </button>
+                <button
+                  onClick={() => { setTestTool('keyword_frequency'); setTestInput('Compute top 10 keywords'); }}
+                  className={`btn btn-xs ${testTool === 'keyword_frequency' ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  <Hash size={12} /> Keywords
+                </button>
+                <button
+                  onClick={() => { setTestTool('citation_checker'); setTestInput('Edd will finish the roadmap'); }}
+                  className={`btn btn-xs ${testTool === 'citation_checker' ? 'btn-emerald' : 'btn-secondary'}`}
+                >
+                  <ShieldCheck size={12} /> Citation Guard
+                </button>
                 <button
                   onClick={() => { setTestTool('calculator'); setTestInput('50000 * 0.15 + 1200'); }}
                   className={`btn btn-xs ${testTool === 'calculator' ? 'btn-amber' : 'btn-secondary'}`}
