@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import RagExplorer from './RagExplorer';
-import AgentChat from './AgentChat';
+import MeetingAnalytics from './MeetingAnalytics';
 import CorpusStudio from './CorpusStudio';
-import { Search, Bot, Layers, Sparkles } from 'lucide-react';
+import { Search, BarChart2, Layers, Sparkles } from 'lucide-react';
 
 export default function QueryHub({ examples, provider }) {
-  const [mode, setMode] = useState('agent'); // Default to ReAct
+  const [mode, setMode] = useState('analytics'); // Default to Analytics
 
   const modes = [
     {
-      id: 'agent',
-      label: 'Autonomous ReAct Agent',
-      shortLabel: 'ReAct Agent',
-      icon: Bot,
-      badge: 'Reasoning + Tools',
-      color: '#818cf8',
-      desc: 'Multi-step reasoning with live tools (RAG, Web Search, Calculator)'
+      id: 'analytics',
+      label: 'Meeting Intelligence',
+      shortLabel: 'Intelligence',
+      icon: BarChart2,
+      badge: 'Instant Analytics',
+      color: '#14b8a6',
+      desc: 'Sentiment · Speaker Stats · Keywords · Timeline · Citation Health — zero LLM cost'
     },
     {
       id: 'rag',
@@ -23,7 +23,7 @@ export default function QueryHub({ examples, provider }) {
       shortLabel: 'RAG Explorer',
       icon: Search,
       badge: 'Child → Parent',
-      color: '#06b6d4',
+      color: '#0ea5e9',
       desc: 'Visual parent-child context expansion & vector search'
     },
     {
@@ -32,7 +32,7 @@ export default function QueryHub({ examples, provider }) {
       shortLabel: 'Cross-Meeting',
       icon: Layers,
       badge: 'Multi-Document',
-      color: '#34d399',
+      color: '#10b981',
       desc: 'Synthesize insights across all indexed meeting transcripts'
     },
   ];
@@ -82,10 +82,11 @@ export default function QueryHub({ examples, provider }) {
                   fontWeight: isActive ? 700 : 500, 
                   fontSize: '0.85rem', 
                   transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)', 
-                  background: isActive ? 'var(--primary-gradient)' : 'transparent', 
+                  background: isActive ? `linear-gradient(135deg, ${m.color}dd 0%, ${m.color}99 100%)` : 'transparent', 
                   color: isActive ? '#ffffff' : 'var(--text-muted)',
-                  boxShadow: isActive ? '0 4px 18px rgba(99, 102, 241, 0.4)' : 'none',
-                  whiteSpace: 'nowrap'
+                  boxShadow: isActive ? `0 4px 18px ${m.color}44` : 'none',
+                  whiteSpace: 'nowrap',
+                  fontFamily: "'Inter', sans-serif"
                 }}
               >
                 <Icon size={16} color={isActive ? '#ffffff' : m.color} />
@@ -117,16 +118,16 @@ export default function QueryHub({ examples, provider }) {
           padding: '4px 14px',
           borderRadius: 'var(--radius-full)'
         }}>
-          <Sparkles size={12} color="#818cf8" />
+          <Sparkles size={12} color={currentModeObj.color} />
           <span>Active Engine: <strong style={{ color: '#f8fafc' }}>{currentModeObj.label}</strong> — {currentModeObj.desc}</span>
         </div>
       </div>
 
       {/* Render the Active Mode View */}
       <div style={{ flex: 1 }}>
-        {mode === 'rag' && <RagExplorer examples={examples} />}
-        {mode === 'agent' && <AgentChat examples={examples} provider={provider} />}
-        {mode === 'corpus' && <CorpusStudio examples={examples} provider={provider} />}
+        {mode === 'analytics' && <MeetingAnalytics examples={examples} provider={provider} />}
+        {mode === 'rag'       && <RagExplorer examples={examples} />}
+        {mode === 'corpus'    && <CorpusStudio examples={examples} provider={provider} />}
       </div>
     </div>
   );

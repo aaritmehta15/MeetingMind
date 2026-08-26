@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Bot } from 'lucide-react';
+import { Sparkles, BarChart2 } from 'lucide-react';
 
 export default function Navigation({ activeTab, onTabChange }) {
   const tabs = [
@@ -12,10 +12,10 @@ export default function Navigation({ activeTab, onTabChange }) {
     },
     { 
       id: 'intelligence', 
-      label: 'Intelligence Modes', 
-      icon: Bot, 
-      badge: 'RAG / ReAct / Corpus',
-      description: 'Interactive conversational reasoning & search'
+      label: 'Intelligence Hub', 
+      icon: BarChart2, 
+      badge: 'Analytics / RAG / Corpus',
+      description: 'Instant NLP analytics, vector search & cross-meeting synthesis'
     },
   ];
 
