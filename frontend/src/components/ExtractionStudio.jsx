@@ -5,7 +5,6 @@ import {
   Volume2, Users, Mail, CheckSquare, MessageSquare, Download, ChevronRight,
   TrendingUp, BarChart2, Eye, Compass, Target
 } from 'lucide-react';
-import ProductivityHub from './ProductivityHub';
 import { useAuth } from '../context/AuthContext';
 
 export default function ExtractionStudio({ userMeetings, provider, fetchUserMeetings }) {
@@ -193,6 +192,19 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Extraction failed');
       setResult(data);
+
+      if (data.action_items && data.action_items.length > 0) {
+        for (const action of data.action_items) {
+          await authFetch('/api/tasks', {
+            method: 'POST',
+            body: JSON.stringify({
+              description: action.description,
+              deadline: action.deadline || null
+            })
+          });
+        }
+        window.dispatchEvent(new Event('tasks-updated'));
+      }
     } catch (err) {
       alert('Error extracting: ' + err.message);
     } finally {
@@ -619,14 +631,6 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                   >
                     <MessageSquare size={12} /> Slack Standup
                   </button>
-                  <div style={{ width: '1px', height: '18px', background: 'var(--border-medium)', margin: '0 2px' }} />
-                  <button
-                    onClick={() => setActionTab('productivity')}
-                    className={`btn btn-xs ${actionTab === 'productivity' ? 'btn-cta' : 'btn-secondary'}`}
-                    style={{ gap: '5px' }}
-                  >
-                    <Target size={12} /> ✨ Productivity Hub
-                  </button>
                 </div>
 
                 <div className="badge badge-verified" style={{ fontSize: '0.72rem' }}>
@@ -897,11 +901,6 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                     {generateSlackMessage()}
                   </pre>
                 </div>
-              )}
-
-              {/* VIEW 5: PRODUCTIVITY HUB — Checklist / Eisenhower Matrix / Timeline */}
-              {actionTab === 'productivity' && (
-                <ProductivityHub result={result} />
               )}
 
             </>

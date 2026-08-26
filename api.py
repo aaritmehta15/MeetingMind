@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
 
 from database import engine, Base, get_db
-from models import User, Meeting
+from models import User, Meeting, Task
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
 
 from extractor import run_extraction
@@ -73,6 +73,15 @@ class Token(BaseModel):
 class MeetingCreate(BaseModel):
     title: str
     transcript_text: str
+
+class TaskCreate(BaseModel):
+    description: str
+    deadline: str | None = None
+
+class TaskUpdate(BaseModel):
+    description: str | None = None
+    deadline: str | None = None
+    done: int | None = None
 
 class MeetingRename(BaseModel):
     title: str
@@ -190,13 +199,58 @@ def rename_meeting(meeting_id: int, req: MeetingRename, current_user: User = Dep
     return {"id": m.id, "title": m.title, "message": "Meeting renamed successfully"}
 
 @app.delete("/api/meetings/{meeting_id}")
-def delete_meeting(meeting_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    m = db.query(Meeting).filter(Meeting.id == meeting_id, Meeting.user_id == current_user.id).first()
-    if not m:
+def delete_meeting(meeting_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id, Meeting.user_id == current_user.id).first()
+    if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-    db.delete(m)
+    db.delete(meeting)
     db.commit()
-    return {"message": "Deleted"}
+    return {"status": "deleted"}
+
+# ── TASKS ─────────────────────────────────────────────────────────────────────
+
+@app.get("/api/tasks")
+def get_tasks(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(Task).filter(Task.user_id == current_user.id).order_by(Task.created_at.asc()).all()
+
+@app.post("/api/tasks")
+def create_task(task_data: TaskCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    task = Task(
+        user_id=current_user.id,
+        description=task_data.description,
+        deadline=task_data.deadline,
+        done=0
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+@app.put("/api/tasks/{task_id}")
+def update_task(task_id: int, task_data: TaskUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == current_user.id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if task_data.description is not None:
+        task.description = task_data.description
+    if task_data.deadline is not None:
+        task.deadline = task_data.deadline
+    if task_data.done is not None:
+        task.done = task_data.done
+        
+    db.commit()
+    db.refresh(task)
+    return task
+
+@app.delete("/api/tasks/{task_id}")
+def delete_task(task_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == current_user.id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db.delete(task)
+    db.commit()
+    return {"status": "deleted"}
 
 def _get_transcript_text(req, db: Session, current_user: User):
     if req.transcript:

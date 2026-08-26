@@ -4,6 +4,7 @@ import Navigation from './components/Navigation';
 import ExtractionStudio from './components/ExtractionStudio';
 import QueryHub from './components/QueryHub';
 import AuthScreen from './components/AuthScreen';
+import GlobalTasks from './components/GlobalTasks';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
@@ -57,7 +58,7 @@ function AppContent() {
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Main Workspace Area */}
-      <main style={{ flex: 1, paddingBottom: '50px' }}>
+      <main style={{ flex: 1, overflowY: 'auto', paddingBottom: '50px' }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '480px', gap: '16px' }}>
             <div style={{
@@ -76,6 +77,7 @@ function AppContent() {
           <>
             {activeTab === 'studio'       && <ExtractionStudio userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
             {activeTab === 'intelligence' && <QueryHub userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
+            {activeTab === 'tasks'        && <GlobalTasks />}
           </>
         )}
       </main>

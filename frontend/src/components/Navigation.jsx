@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, BarChart2 } from 'lucide-react';
+import { Sparkles, BarChart2, CheckSquare } from 'lucide-react';
 
 export default function Navigation({ activeTab, onTabChange }) {
   const tabs = [
@@ -16,6 +16,13 @@ export default function Navigation({ activeTab, onTabChange }) {
       icon: BarChart2, 
       badge: 'Analytics / RAG / Corpus',
       description: 'Instant NLP analytics, vector search & cross-meeting synthesis'
+    },
+    { 
+      id: 'tasks', 
+      label: 'Action Items', 
+      icon: CheckSquare, 
+      badge: 'Global Checklist',
+      description: 'Persistent list of tasks across all meetings'
     },
   ];
 
