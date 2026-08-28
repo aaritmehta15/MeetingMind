@@ -1,4 +1,4 @@
-# MeetingMind 2.0 🧠 — Intelligent Meeting Intelligence Engine
+# MeetingMind 🧠 — Intelligent Meeting Intelligence Engine
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![React 18](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
@@ -6,7 +6,7 @@
 [![FAISS](https://img.shields.io/badge/FAISS-CPU-green.svg)](https://github.com/facebookresearch/faiss)
 [![LLM Support](https://img.shields.io/badge/LLM-Groq%20%7C%20Gemini%20%7C%20Ollama-orange.svg)](https://groq.com/)
 
-**MeetingMind 2.0** is an enterprise-grade, full-stack Generative AI meeting assistant and intelligence framework. Designed to extract actionable insights from unstructured meeting transcripts, it features a **0% hallucination guarantee** via verbatim citation grounding, cross-meeting Hierarchical RAG, and an immersive glassmorphism React UI.
+**MeetingMind** is an enterprise-grade, full-stack Generative AI meeting assistant and intelligence framework. Designed to extract actionable insights from unstructured meeting transcripts, it features a **0% hallucination guarantee** via verbatim citation grounding, cross-meeting Hierarchical RAG, and an immersive glassmorphism React UI.
 
 ---
 
