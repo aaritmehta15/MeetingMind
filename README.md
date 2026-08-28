@@ -1,166 +1,107 @@
-# MeetingMind 🧠 — Intelligent Meeting Intelligence & Evaluation Agent
+# MeetingMind 2.0 🧠 — Intelligent Meeting Intelligence Engine
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Pydantic v2](https://img.shields.io/badge/pydantic-v2-e92063.svg)](https://docs.pydantic.dev/)
+[![React 18](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![FAISS](https://img.shields.io/badge/FAISS-CPU-green.svg)](https://github.com/facebookresearch/faiss)
 [![LLM Support](https://img.shields.io/badge/LLM-Groq%20%7C%20Gemini%20%7C%20Ollama-orange.svg)](https://groq.com/)
 
-**MeetingMind** is an end-to-end Generative AI meeting assistant and evaluation framework designed for extracting actionable intelligence from unstructured meeting transcripts with **0% hallucination guarantees**, grounded conversational RAG, and an autonomous ReAct Q&A agent.
+**MeetingMind 2.0** is an enterprise-grade, full-stack Generative AI meeting assistant and intelligence framework. Designed to extract actionable insights from unstructured meeting transcripts, it features a **0% hallucination guarantee** via verbatim citation grounding, cross-meeting Hierarchical RAG, and an immersive glassmorphism React UI.
 
 ---
 
 ## 🌟 Key Features
 
-1. **Deterministic Citation Guard (Zero Hallucinations)**:
-   - Every extracted action item and decision is validated against exact verbatim substring spans from the raw transcript.
-   - Any hallucinated quote is automatically rejected and flagged with metrics.
+### 1. 🔍 Meeting Analytics & NLP
+- Extracts detailed speaker diarization, keyword frequency mapping, and dialogue turn analysis directly from raw text transcripts.
+- Interactive visualizations tracking who spoke, for how long, and their core topics.
 
-2. **Hierarchical Parent-Child RAG**:
-   - Conversational dialogue breaks naive flat chunking. MeetingMind indexes **small, precise child speaker turns** for vector search, while expanding to **5-turn parent windows** for LLM context generation.
+### 2. ⚡ Extraction Studio & Citation Guard
+- Autonomously generates **Executive Summaries, Decisions, and Action Items**.
+- **Deterministic Citation Guard**: Every action item and decision is validated against exact verbatim substring spans from the raw transcript. Hallucinations are actively detected, flagged, and rejected.
 
-3. **Autonomous ReAct Agent**:
-   - Multi-step reasoning loop (Reason + Act) equipped with tools (`rag_search`, `get_extraction`, `get_summary`) to answer complex queries with verbatim cited evidence.
+### 3. 📤 Instant Productivity Integrations
+Instantly format and export grounded intelligence to the tools you already use:
+- **Automated Emails**: Internal Executive Summaries, Action-Oriented Follow-ups, and Formal Client Emails.
+- **Ticketing**: Ready-to-paste Jira and Linear Markdown Tickets with Assignees and Deadlines.
+- **Team Comms**: Slack and Microsoft Teams formatted stand-up broadcasts.
 
-4. **Cross-Meeting Knowledge Corpus**:
-   - Ingest and index multiple meeting transcripts into a persistent FAISS vector store to ask multi-meeting analytical questions with source meeting attribution.
-
-5. **AMI Corpus Evaluation Pipeline**:
-   - Rigorous benchmarking against the real-world **AMI Meeting Corpus** measuring ROUGE-1/2/L, Action Item Precision/Recall/F1 (Jaccard soft matching), and Citation Rejection Rates.
-
-6. **Multi-Provider LLM Dispatch**:
-   - Built-in failover and smart rate-limit retry across **Groq**, **Google Gemini**, and local **Ollama** models.
+### 4. 📚 Corpus Studio & Cross-Meeting RAG
+- Save and archive unlimited transcripts into your personalized **Corpus Studio**.
+- **Hierarchical Parent-Child RAG**: Indexes small, precise child speaker turns for FAISS vector search, while expanding to 5-turn parent windows for LLM context generation.
+- Execute deep cross-transcript semantic searches to synthesize answers across multiple historical meetings simultaneously.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture Stack
 
-```
-                                 ┌────────────────────────┐
-                                 │   Meeting Transcript   │
-                                 └───────────┬────────────┘
-                                             │
-                     ┌───────────────────────┴───────────────────────┐
-                     ▼                                               ▼
-         ┌───────────────────────┐                       ┌───────────────────────┐
-         │  Extraction Pipeline  │                       │ Hierarchical RAG Index│
-         │  (Pydantic + Prompts) │                       │  (Child Turns ->      │
-         └───────────┬───────────┘                       │   Parent Context)     │
-                     │                                   └───────────┬───────────┘
-                     ▼                                               │
-         ┌───────────────────────┐                                   │
-         │ Verbatim Citation     │                                   │
-         │ Guard (Rejection Rate)│                                   │
-         └───────────┬───────────┘                                   │
-                     │                                               │
-                     ▼                                               ▼
-         ┌───────────────────────────────────────────────────────────────────┐
-         │                 ReAct Agent & CLI Interface                       │
-         │          (Extract | Search | Ask | Corpus | Eval)                 │
-         └───────────────────────────────────────────────────────────────────┘
-```
+**Backend**:
+- **Framework**: FastAPI (Python)
+- **Database**: SQLite with SQLAlchemy ORM (Multi-tenant ready)
+- **Vector Search**: FAISS CPU & SentenceTransformers (`all-MiniLM-L6-v2`)
+- **LLM Engine**: Groq (Llama-3/Mistral/Gemma)
+- **Validation**: Pydantic v2
+
+**Frontend**:
+- **Framework**: React 18 + Vite
+- **Styling**: Vanilla CSS with modern Glassmorphism aesthetics
+- **Icons**: Lucide React
+- **Routing & State**: Context API
 
 ---
 
 ## 🚀 Quickstart
 
-### 1. Clone & Install Dependencies
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/aaritmehta15/MeetingMind-.git
-cd MeetingMind-
-
-# Create virtual environment
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On Unix/macOS:
-# source venv/bin/activate
-
-pip install -r requirements.txt
+git clone https://github.com/aaritmehta15/MeetingMind.git
+cd MeetingMind
 ```
 
-### 2. Configure Environment Keys
-Create a `.env` file from `.env.example`:
+### 2. Setup the Backend (FastAPI)
 ```bash
+# Create a virtual environment
+python -m venv venv
+
+# Activate it (Windows)
+venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create your .env file
 cp .env.example .env
 ```
-Add your API keys:
-```ini
-GROQ_API_KEY=your_groq_api_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
-LLM_PROVIDER=groq
-GROQ_MODEL=groq/compound-mini
+*Add your `GROQ_API_KEY` to the `.env` file.*
+
+```bash
+# Start the Uvicorn server
+python -m uvicorn api:app --host 127.0.0.1 --port 8000 --reload
 ```
+
+### 3. Setup the Frontend (Vite + React)
+Open a new terminal window:
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the Vite development server
+npm run dev
+```
+
+### 4. Launch
+Navigate to `http://localhost:5173/` in your browser to experience the MeetingMind Engine.
 
 ---
 
-## 💻 CLI Usage Guide
+## 📊 Security & Compliance
 
-### 1. Extract Structured Action Items & Decisions
-Extract summary, action items with owners/deadlines, and verify quotes:
-```bash
-python cli.py extract "examples/dunder-mifflin-sales.txt"
-```
-
-### 2. Hierarchical RAG Search
-Perform grounded semantic search over a specific transcript:
-```bash
-python cli.py search "examples/q1-planning-sarah.txt" "who owns the roadmap"
-```
-
-### 3. Ask Questions via ReAct Agent
-Run the conversational ReAct agent to investigate a transcript:
-```bash
-python cli.py ask "examples/q1-planning-sarah.txt" "What did Edd commit to do, and by when?"
-```
-
-### 4. Cross-Meeting Corpus Analysis
-Build a multi-meeting index and query across all past meetings:
-```bash
-# Build index across meeting directory
-python cli.py corpus-build "examples" --corpus-dir corpus
-
-# Query across meetings
-python cli.py corpus-ask "what decisions were made about the sales strategy?" --corpus-dir corpus
-```
-
-### 5. Run AMI Benchmark Evaluation
-Evaluate extraction accuracy on the academic AMI dataset:
-```bash
-python cli.py eval --n 10 --split test
-```
-
----
-
-## 📁 Repository Structure
-
-```
-├── agent.py            # ReAct autonomous agent loop with grounded tools
-├── agent_tools.py      # Tool wrappers (rag_search, get_extraction, get_summary)
-├── ami_loader.py       # HuggingFace AMI meeting corpus loader & preprocessor
-├── citation_guard.py   # Hallucination guard (verbatim substring validation)
-├── cli.py              # Central Rich CLI entrypoint
-├── corpus.py           # Cross-meeting FAISS corpus & synthesis engine
-├── eval.py             # Quantitative evaluation suite (ROUGE, P/R/F1, Rejection Rate)
-├── extractor.py        # Core extraction pipeline with JSON validation & display
-├── llm.py              # Multi-provider LLM client with retry & JSON mode
-├── prompts.py          # Grounded prompts & few-shot examples
-├── rag_index.py        # Hierarchical Parent-Child RAG with FAISS vector store
-├── schemas.py          # Pydantic v2 data models
-└── requirements.txt    # Production dependencies
-```
-
----
-
-## 📊 Evaluation Metrics
-
-MeetingMind was benchmarked on the test split of the Edinburgh AMI Meeting Corpus:
-
-| Metric | Score | Note |
-|---|---|---|
-| **Citation Rejection Rate** | **0.00%** | All generated evidence matched verbatim transcript spans |
-| **Action Item Precision** | **0.50** | Soft token Jaccard matching vs. human annotations |
-| **Action Item Recall** | **0.50** | Gold action items captured |
-| **Action Item F1** | **0.50** | Harmonic mean of action items |
+MeetingMind is built with data integrity in mind:
+- **No Data Retention by LLMs**: Leverages stateless API calls to Groq.
+- **Local FAISS Architecture**: All vector embeddings and semantic search indices are computed and stored locally in memory or on-disk, never sent to external vector DB providers.
+- **Verbatim Grounding**: The strict Pydantic Extraction layer guarantees that if the AI hallucinates an action item not spoken in the transcript, it is visually highlighted as `Rejected` on the UI.
 
 ---
 
