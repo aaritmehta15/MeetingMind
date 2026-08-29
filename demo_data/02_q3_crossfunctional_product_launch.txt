@@ -2,46 +2,50 @@ Enterprise Platform V2 General Availability Launch Review
 Date: October 11, 2025 | Duration: 50 mins
 Participants: Samantha Reed (Head of Product), Liam Zhao (Staff Frontend Architect), Chloe Dupont (Lead Product Designer), Tariq Mansoor (Billing & Payments Lead), Karen Miller (VP of Customer Success)
 
-Samantha Reed: Welcome everyone. We are three weeks out from our planned General Availability launch of Enterprise Platform V2 on November 3rd. Today's objective is to review our blocker burn-down, sign off on billing workflows, evaluate the enterprise permissions matrix UI, and confirm whether we can hit our GA target without compromising reliability. Liam, let's start with frontend stability.
+Samantha Reed: Welcome everyone to our General Availability readiness sync for Enterprise Platform V2. We are exactly three weeks away from our target launch date of Friday, November 3rd. Today's meeting has four critical objectives: first, reviewing our engineering blocker burn-down and cross-browser test results; second, inspecting the Stripe enterprise billing migration and multi-currency invoicing workflows; third, reviewing the final UX specs for the Role-Based Access Control permissions matrix; and fourth, confirming our customer onboarding schedule for the early adopter cohort. Liam, let's start with frontend engineering readiness.
 
-Liam Zhao: Thanks, Samantha. On the frontend, 94% of our enterprise test suite is passing. However, we discovered a P0 blocker during cross-browser regression testing on macOS and iOS Safari. Safari's Intelligent Tracking Prevention (ITP) blocks third-party session cookies during the Okta SAML 2.0 single sign-on redirect loop.
+Liam Zhao: Thanks, Samantha. Our frontend engineering team has closed 47 out of 52 launch-blocking tickets over the last two sprints. In our Cypress and Playwright automated end-to-end test suites across Chromium and Firefox, our pass rate is sitting at 98.4%. However, during our final round of cross-browser exploratory testing on macOS Safari 17 and iOS Mobile Safari, we encountered a critical P0 authentication blocker.
 
-Chloe Dupont: Several beta enterprise testers reported being trapped in an infinite login loop when attempting to authenticate through their corporate Okta dashboard.
+Chloe Dupont: To elaborate on what users experience: when enterprise beta testers attempt to sign in using their corporate Single Sign-On provider—specifically Okta and Azure Active Directory via SAML 2.0—Safari's Intelligent Tracking Prevention (ITP) engine classifies the cross-domain redirect cookies as third-party tracking cookies and silently drops the session token. As a result, the user is thrown into an infinite authentication loop where the login screen constantly refreshes without ever landing on the workspace dashboard.
 
-Samantha Reed: What is the remediation strategy for the Safari WebKit authentication issue?
+Samantha Reed: That is a total showstopper. Fortune 500 enterprise customers will not tolerate broken SSO, especially on corporate MacBooks. Liam, what is the architectural remediation, and how much engineering effort is required?
 
-Liam Zhao: We need to rewrite the authentication handshake to utilize secure, HTTP-only, SameSite=Lax authorization code exchange tokens stored in server-side sessions rather than relying on client-side iframe cookie handshakes. I have already drafted the architectural fix with our security team, but it requires two days of backend API adjustments and three days of end-to-end Cypress regression testing.
+Liam Zhao: We conducted an emergency architecture spike yesterday with our application security team. The fix requires abandoning client-side iframe cookie handshakes entirely. Instead, we must refactor the authentication flow to use server-side OAuth2 authorization code exchange with Proof Key for Code Exchange (PKCE). The authentication token will be securely set via an HTTP-only, SameSite=Lax cookie directly from our apex domain API gateway. The backend API changes will take two days, and the frontend state management refactoring and Cypress cross-browser regression test suites will require an additional three days.
 
-Tariq Mansoor: How does that affect the billing integration timeline?
+Tariq Mansoor: How does that shift our testing dependencies and deployment freeze?
 
-Liam Zhao: I will need full focus on this through Tuesday, October 17th. I can guarantee a merged pull request and production-ready patch by 5:00 PM next Tuesday.
+Liam Zhao: If my team focuses 100% on this starting this morning, we will have the server-side PKCE implementation merged, deployed to staging, and verified across all versions of Safari and iOS by Tuesday, October 17th at 5:00 PM.
 
-Samantha Reed: Understood. Let's make an executive decision: because seamless enterprise SSO is a mandatory requirement for Fortune 500 customers, we will delay our General Availability launch date by exactly one week, moving the launch from November 3rd to Friday, November 10th. Tariq, what is the status of the Stripe enterprise billing migration?
+Samantha Reed: Because enterprise single sign-on is non-negotiable for enterprise procurement, let's make an official executive decision: we will adjust our General Availability launch date, delaying GA by exactly one week from November 3rd to Friday, November 10th. This will give QA four full days of regression buffer. Now, let's shift to billing and revenue operations. Tariq, what is the status of our Stripe integration?
 
-Tariq Mansoor: We completed the migration away from our custom checkout tokens to the unified Stripe Customer Portal and Tiered Invoicing API. All automated proration calculations for mid-cycle seat additions are working properly in sandbox mode.
+Tariq Mansoor: We have completed the migration away from our legacy custom checkout tokens over to the unified Stripe Customer Portal and Stripe Invoicing API. In sandbox testing, automated proration calculations for mid-cycle seat additions are working flawlessly. If an enterprise customer on an annual plan adds 25 seats with 140 days remaining in their billing cycle, Stripe accurately computes the exact per-diem proration and generates an consolidated supplementary invoice.
 
-Karen Miller: What happens if an enterprise customer pays via ACH bank transfer instead of a corporate credit card?
+Karen Miller: What is the fallback workflow if a corporate finance department insists on paying via ACH wire transfer or automated clearinghouse debit rather than corporate credit card?
 
-Tariq Mansoor: We built an asynchronous webhook handler that grants provisional 7-day workspace access while the ACH micro-deposit verification clears. If the bank settlement fails, automated dunning emails are triggered and the workspace is safely downgraded to read-only mode after 14 days.
+Tariq Mansoor: We built an asynchronous payment listener utilizing Stripe Webhooks. When an enterprise chooses ACH or Wire Invoicing, our system instantly provisions provisional 7-day workspace access while the banking micro-deposits and ACH clearing settle. If the bank settlement clears within 5 business days, workspace status transitions automatically to active. If the transaction fails, automated smart-dunning email reminders are sent to the billing contact, and the workspace safely defaults to read-only mode after 14 days rather than abruptly locking users out of their data.
 
-Samantha Reed: That's a critical safeguard for Customer Success. Tariq, when will end-to-end sandbox verification for multi-currency invoicing be completed?
+Samantha Reed: That is a huge relief for Customer Success and eliminates churn friction. Tariq, when will the end-to-end sandbox verification for European multi-currency invoicing in EUR and GBP be completed?
 
-Tariq Mansoor: I will finalize the Stripe webhook idempotent replay test suite and verify multi-currency EUR and GBP invoicing by Friday, October 20th at 3:00 PM.
+Tariq Mansoor: I will complete the idempotent webhook replay tests, verify automated VAT tax collection with Stripe Tax, and publish the sandbox verification report by Friday, October 20th at 3:00 PM.
 
-Chloe Dupont: Moving to UX: we completed usability interviews with 12 enterprise workspace administrators regarding the new Role-Based Access Control (RBAC) Permissions Matrix. Feedback was overwhelmingly positive, but users requested a bulk-assign role toggle and an audit-trail preview before committing permission changes.
+Samantha Reed: Great. Chloe, let's look at design and usability. How did the user testing go for the new Enterprise Permissions Matrix?
 
-Samantha Reed: Can we incorporate those two enhancements before GA?
+Chloe Dupont: We conducted moderated usability testing sessions with 12 IT workspace administrators from mid-market and enterprise accounts. Overall satisfaction scored 4.8 out of 5. Administrators loved the visual clarity of our granular permissions toggles. However, two high-priority UX requests emerged: first, administrators wanted a bulk-assign role toggle so they don't have to configure permissions for 200 users individually; second, they requested a mandatory change-summary preview modal that displays an audit-trail diff before changes are permanently committed.
 
-Chloe Dupont: Yes. I have already updated the Figma design tokens and component specs. I will deliver the finalized high-fidelity design specifications and interaction prototypes for the permissions matrix to the frontend engineering team by tomorrow, October 12th at 2:00 PM.
+Samantha Reed: Can we incorporate those two UI components into the design system without overloading frontend engineering?
 
-Karen Miller: From the Customer Success and Support standpoint, we have identified a pilot cohort of 25 enterprise customer accounts who agreed to participate in our early access program.
+Chloe Dupont: Absolutely. The component architecture in our Figma design system already supports both patterns. I am finalizing the interactive component prototypes, hover states, and responsive layout specifications today. I will deliver the finalized high-fidelity design specifications and Figma developer handoff assets to Liam's frontend team by tomorrow, Thursday, October 12th at 2:00 PM.
 
-Samantha Reed: How will we manage their onboarding?
+Samantha Reed: Excellent. Now turning to customer success and rollout readiness: Karen, what is our strategy for the enterprise pilot cohort?
 
-Karen Miller: My team will host three live onboarding workshops and publish the updated administrative knowledge-base documentation. I will have all 25 customer champion training sessions scheduled and the help center documentation published by Wednesday, October 25th.
+Karen Miller: We have curated a high-value pilot cohort of 25 enterprise customer accounts—representing over 4,200 active daily users—who have officially agreed to participate in our early adopter wave. My team is preparing customized onboarding playbooks, video walkthroughs, and executive cheat sheets.
 
-Samantha Reed: Fantastic coordination. To close the loop: I will draft the official Executive Launch Memo detailing the adjusted November 10th GA date and distribute it to all C-suite stakeholders by end of day today, October 11th.
+Samantha Reed: What is the timeline for scheduling those onboarding sessions?
 
-Liam Zhao: Sounds like a clear path forward.
+Karen Miller: I will schedule all 25 customer champion training webinars and publish the comprehensive administrative knowledge-base documentation in our customer Help Center by Wednesday, October 25th at 5:00 PM.
 
-Samantha Reed: Thank you all for the hard work and transparency. Let's make this launch a massive success.
+Samantha Reed: Fantastic coordination across the board. To synthesize today's actions: on the executive communication side, I will draft the official Executive Launch Adjustment Memo—documenting the revised November 10th GA date, the Safari SSO remediation plan, and the beta customer onboarding schedule—and distribute it to the CEO, VP of Sales, and C-suite stakeholders by end of day today, October 11th.
+
+Liam Zhao: We have clear alignment and the extra week guarantees we launch a bulletproof enterprise product.
+
+Samantha Reed: Exactly. Thank you everyone for the intense dedication and candid feedback. Let's make this launch an incredible milestone for the company. Meeting adjourned.

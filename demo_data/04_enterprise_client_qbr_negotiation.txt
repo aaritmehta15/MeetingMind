@@ -2,32 +2,36 @@ Enterprise Customer Expansion & QBR Contract Negotiation
 Date: October 13, 2025 | Duration: 40 mins
 Participants: David Sterling (Enterprise Account Executive), Dr. Aris Thorne (Chief Technology Officer, Apex Global Financial), Jessica Lin (VP of Solutions Engineering), Rachel Moore (Commercial & Legal Contracts Counsel)
 
-David Sterling: Good afternoon, Dr. Thorne. Thank you for making time for our Q4 Strategic Review and contract renewal discussion. We are excited about how Apex Global Financial has scaled its usage of MeetingMind across 1,400 active wealth managers over the past year.
+David Sterling: Good afternoon, Dr. Thorne. Thank you for joining us today for our Q4 Strategic Partnership Review and multi-year contract renewal discussion. Over the past twelve months, it has been a privilege partnering with Apex Global Financial as you deployed MeetingMind across your North American wealth management and investment banking divisions.
 
-Dr. Aris Thorne: Thanks, David. Our investment bankers and research analysts have saved an estimated 12,000 hours of manual note-taking and compliance auditing over the last three quarters. However, as we look to expand this deployment globally to our London and Frankfurt trading desks, we have three non-negotiable enterprise requirements: dedicated EU data residency, custom single-tenant encryption keys, and an enhanced 99.99% High-Availability SLA with strict financial penalties for downtime.
+Dr. Aris Thorne: Thanks for having me, David, Jessica, and Rachel. Our executive committee recently reviewed the annual impact report of MeetingMind. Across our 1,400 active wealth advisors and investment analysts, your platform has saved an audited 14,200 hours of manual meeting documentation, client note synthesis, and compliance record-keeping. More importantly, our compliance audit turnaround times dropped by 42%. Because of these results, our Chief Executive Officer and Operating Committee have approved a global expansion plan to roll out MeetingMind to our international trading desks in London, Frankfurt, and Singapore, scaling our total seat count from 1,400 to 3,500 active users.
 
-Jessica Lin: Dr. Thorne, I can speak to the technical architecture. We recently expanded our infrastructure to support multi-region tenant isolation. We can provision an isolated, single-tenant Kubernetes cluster in AWS Frankfurt (eu-central-1) where all meeting audio transcripts, vector embeddings, and database records remain strictly within the European Economic Area (EEA), fully satisfying GDPR Article 44 cross-border transfer requirements.
+David Sterling: That is phenomenal validation of the platform's value. We are thrilled to support Apex's global expansion.
 
-Dr. Aris Thorne: What about key management? Our internal compliance policy mandates customer-managed encryption keys (CMEK) via AWS KMS HSMs where Apex holds the primary key material.
+Dr. Aris Thorne: However, before we can sign the renewal and global amendment, our European Risk and Regulatory Affairs Committee has stipulated three non-negotiable architectural and legal requirements: first, absolute European Union data residency; second, customer-managed encryption key sovereignty with dedicated hardware security modules; and third, an enhanced enterprise Service Level Agreement of 99.99% monthly uptime backed by financial service credits and dedicated 15-minute response times for Severity-0 incidents.
 
-Jessica Lin: Our enterprise architecture fully supports AWS KMS Key Policy delegation. You will retain sole ownership of the root cryptographic key material and can audit or revoke access at any time through your own AWS CloudTrail logs.
+Jessica Lin: Dr. Thorne, I am pleased to address each of those technical requirements in detail. Over the last quarter, we launched our Multi-Region Sovereign Cloud architecture. For Apex Global's European operations, we will provision a completely isolated, single-tenant Kubernetes cluster hosted in the AWS Europe Frankfurt region (`eu-central-1`). Under this deployment model, all raw audio streams, transcribed text, vector embeddings, and database records remain exclusively within the European Economic Area (EEA), completely satisfying GDPR Article 44 cross-border transfer standards and BaFin financial regulations in Germany.
 
-Dr. Aris Thorne: That resolves our data sovereignty and InfoSec requirements. David, let's discuss commercial terms. We are looking at a 2-year enterprise commitment covering 3,500 total seats across North America and Europe. What is your proposed pricing structure?
+Dr. Aris Thorne: What about encryption key management and database isolation? In financial services, shared multi-tenant key vaults are prohibited by our security charter.
 
-David Sterling: For a 2-year commitment at 3,500 seats with dedicated EU data residency and 24/7 dedicated Solutions Engineering support, our standard list price is $320,000 per year. In consideration of Apex Global Financial's multi-year partnership and global expansion, we are offering an enterprise rate of $240,000 annually, bringing the total 2-year contract value to $480,000.
+Jessica Lin: We fully support Customer-Managed Encryption Keys (CMEK) utilizing AWS Key Management Service (KMS) with FIPS 140-3 Level 3 Hardware Security Modules. Apex Global Financial will generate, hold, and manage the root cryptographic master keys in your own AWS account. Our isolated Frankfurt instances will use cryptographic key delegation policies to perform envelope encryption at rest and in transit. If your security team ever detects anomalous activity or wishes to revoke access, you can disable the root KMS key directly in your AWS console, instantly rendering all stored data cryptographically inaccessible to anyone, including our engineers.
 
-Dr. Aris Thorne: If we commit to the $480,000 contract, will you include the 99.99% monthly uptime SLA with a 15-minute response time for Severity-0 outages?
+Dr. Aris Thorne: That completely satisfies our InfoSec and cryptographic governance guidelines. Now let's discuss the commercial terms and pricing. David, what is your proposal for a 2-year enterprise commitment across all 3,500 global seats?
 
-David Sterling: Yes. We will formally codify the 99.99% availability SLA with 10% monthly invoice service credits if uptime falls below that threshold, backed by dedicated 15-minute engineer response times.
+David Sterling: Under our standard enterprise price book, 3,500 seats with single-tenant EU data residency, CMEK encryption, and dedicated Solutions Engineering support is listed at $360,000 annually. However, in recognition of Apex Global Financial's flagship partnership and multi-year commitment, we are offering an executive enterprise rate of $240,000 per year on a 2-year agreement. This brings the total 2-year contract value to $480,000—delivering a 33% discount off our standard list pricing while locking in your seat rates through 2027.
 
-Dr. Aris Thorne: That is acceptable. We have a deal. What are the immediate next steps to execute?
+Dr. Aris Thorne: If we commit to the $480,000 multi-year agreement today, will you formally codify the 99.99% monthly uptime SLA with the 15-minute Severity-0 response time into the Master Services Agreement?
 
-David Sterling: I will generate the finalized Order Form and Master Services Agreement (MSA) reflecting the $480,000 contract value and Frankfurt deployment specifications by Friday, October 20th at 12:00 PM.
+David Sterling: Yes, absolutely. We will include a dedicated 99.99% High Availability SLA Addendum. If our monthly uptime falls below 99.99%, Apex will automatically receive a 10% invoice service credit on that month's billing, scaling up to 25% for uptime below 99.9%. Furthermore, our Global SRE team will provide a 24/7 dedicated escalation hotline with a contractual 15-minute initial response time for any P0 service interruption.
 
-Rachel Moore: On the legal side, I will prepare the customized Data Processing Addendum (DPA) incorporating EU Standard Contractual Clauses and the specialized SLA terms by Monday, October 23rd at 5:00 PM.
+Dr. Aris Thorne: Outstanding. We have commercial and architectural consensus. What are the specific procedural steps and delivery milestones to finalize execution?
 
-Jessica Lin: On the engineering side, I will provision the dedicated Frankfurt staging tenant environment and share the secure API onboarding credentials with Dr. Thorne's platform team by Tuesday, October 24th at 2:00 PM.
+David Sterling: On the sales and commercial side, I will generate the finalized Order Form and Master Services Agreement (MSA) reflecting the $480,000 contract value, 3,500 seats, and Frankfurt deployment terms, and deliver it to your inbox by Friday, October 20th at 12:00 PM.
 
-Dr. Aris Thorne: Perfect. Once our legal counsel reviews the DPA, I will present the contract to the Apex Procurement Executive Committee and execute the agreement via DocuSign by Thursday, November 2nd.
+Rachel Moore: On the legal and compliance side, I will prepare the customized Data Processing Addendum (DPA)—incorporating EU Standard Contractual Clauses (SCCs), UK Addendum provisions, and the 99.99% SLA terms—and transmit it to Apex's legal counsel by Monday, October 23rd at 5:00 PM.
 
-David Sterling: Outstanding. Thank you Dr. Thorne for your continued partnership and trust. We look forward to powering Apex Global's worldwide operations.
+Jessica Lin: On the solutions engineering side, I will provision the dedicated Frankfurt staging tenant environment, configure the CMEK key policy templates, and deliver the secure API onboarding keys and documentation to your platform team by Tuesday, October 24th at 2:00 PM.
+
+Dr. Aris Thorne: Excellent coordination. Once our legal team reviews Rachel's DPA draft, I will sponsor the contract through the Apex Procurement Executive Committee on November 1st and execute the digital agreement via DocuSign by Thursday, November 2nd at 5:00 PM.
+
+David Sterling: Wonderful. Thank you, Dr. Thorne, for your visionary leadership and continued trust in MeetingMind. We look forward to powering Apex Global Financial's worldwide operations for years to come. Meeting adjourned.

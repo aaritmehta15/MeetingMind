@@ -2,40 +2,46 @@ Security Incident Post-Mortem & SOC-2 Type II Audit Review
 Date: October 12, 2025 | Duration: 55 mins
 Participants: Alexander Wright (Chief Information Security Officer), Farah Al-Hassan (Lead Application Security Engineer), Nathan Scott (Staff DevOps Engineer), Zoe Chen (Director of Compliance & Governance)
 
-Alexander Wright: Good afternoon, team. Thank you for assembling on short notice. Today we are conducting the formal post-incident review for Incident INC-8492, which occurred on Tuesday evening, followed by an operational checkpoint on our upcoming SOC-2 Type II annual surveillance audit. Farah, please provide the technical breakdown of the incident.
+Alexander Wright: Good afternoon, team. Thank you for assembling promptly. Today we have two vital security agenda items: first, conducting our formal post-incident retrospective on Incident INC-8492, which occurred on Tuesday evening; and second, reviewing our remediation milestones for the upcoming SOC-2 Type II annual surveillance audit. Let's begin with the incident review. Farah, please walk us through the chronological telemetry, root cause, and blast radius of INC-8492.
 
-Farah Al-Hassan: At 18:22 UTC on Tuesday, October 9th, our monitoring systems detected an anomalous traffic spike of 45,000 requests per minute directed at our `/api/v1/auth/password-reset` endpoint originating from a distributed botnet across 3,200 unique IP addresses.
+Farah Al-Hassan: Thank you, Alexander. On Tuesday, October 9th at exactly 18:22 UTC, our automated Datadog anomaly detection monitors fired high-priority alerts when HTTP traffic to our public `/api/v1/auth/password-reset` endpoint spiked from our baseline of 120 requests per minute to an unprecedented 45,000 requests per minute. Forensic packet analysis revealed a distributed credential-stuffing attack orchestrated across a botnet of approximately 3,200 unique IP addresses worldwide.
 
-Nathan Scott: Our backend authentication service experienced CPU saturation, which resulted in a 4-minute elevated latency period where 6% of legitimate user login requests returned HTTP 503 service unavailable errors.
+Nathan Scott: The sudden volume surge overwhelmed our backend authentication microservice connection pools in us-east-1. For a 4-minute window between 18:24 and 18:28 UTC, CPU utilization on our authentication pods saturated at 100%, causing the ingress gateway to drop 6.2% of legitimate user login attempts with HTTP 503 Service Unavailable errors before the automated pod autoscaler initialized extra replicas.
 
-Alexander Wright: Was there any unauthorized access or compromise of customer personal identifiable data?
+Alexander Wright: What did our database and audit log forensics show regarding potential data breach or customer credential compromise?
 
-Farah Al-Hassan: We conducted forensic verification across all server logs and database write queries. There was zero unauthorized access, zero account takeovers, and zero data exfiltration. The automated credential stuffing attack was halted by our secondary Redis account-lockout heuristics. However, the root cause was an improper bypass rule in our Cloudflare WAF configuration where path-based rate limiting was inadvertently skipped for query parameters containing specific escape sequences.
+Farah Al-Hassan: I conducted comprehensive log forensics across our Amazon Aurora PostgreSQL audit logs, Redis session caches, and AWS CloudTrail events. We confirmed that zero customer accounts were compromised, zero passwords were reset, and zero customer data or personal identifiable information (PII) was accessed or exfiltrated. The attackers were attempting blind credential stuffing using stolen credential dumps from third-party breaches. Our secondary defense-in-depth layer—specifically our Redis-backed exponential backoff lockout rule, which temporarily locks accounts after 5 failed attempts—successfully mitigated every unauthorized attempt.
 
-Alexander Wright: How do we ensure this can never recur across any public authentication routes?
+Alexander Wright: If our edge WAF was configured for rate limiting, why did it fail to block the 45,000 requests per minute before they hit our origin servers?
 
-Farah Al-Hassan: We have re-architected the edge security policy. We will enforce Cloudflare WAF token-bucket rate limiting strictly at the edge layer, capping requests to 100 requests per minute per IP address on all `/api/v1/auth/*` endpoints regardless of headers or query arguments.
+Farah Al-Hassan: That was the core architectural vulnerability. Our Cloudflare Web Application Firewall (WAF) was configured with a path-based rate-limiting rule matching `/api/v1/auth/password-reset`. However, the attackers bypassed this rule by appending URL-encoded query parameters and trailing slash variations—such as `/api/v1/auth/password-reset?ref=%2F&lang=en`—which our legacy regex parser failed to normalize before rate-limit evaluation. As a consequence, the edge WAF passed the traffic straight to our origin API gateway without throttling.
 
-Alexander Wright: Agreed. Decision: enforce strict edge-level Cloudflare rate limiting across all authentication endpoints and implement automated WAF regression integration tests in CI. Farah, when can you deliver the final sanitized incident report?
+Alexander Wright: That is an unacceptable edge configuration gap. What is our permanent architectural solution?
 
-Farah Al-Hassan: I will publish the finalized, peer-reviewed Post-Mortem Incident Report INC-8492 to our internal security portal and executive repository by Thursday, October 19th at 4:00 PM.
+Farah Al-Hassan: We have re-engineered our Cloudflare edge rules. We are implementing Cloudflare Advanced Rate Limiting with normalized URL path decoding at the edge. The new rule enforces a strict token-bucket rate limit of 100 requests per minute per IP address across all endpoints matching `/api/v1/auth/*`, evaluated against the normalized URI path regardless of query parameters, HTTP headers, or request encoding. Furthermore, we are introducing Cloudflare Turnstile CAPTCHA verification if an individual IP triggers more than 15 password reset attempts in a rolling 10-minute window.
 
-Alexander Wright: Nathan, what about our SOC-2 Type II audit remediation for access controls?
+Alexander Wright: Let's formalize that decision immediately: we approve the Cloudflare Advanced Rate Limiting edge rules with Turnstile CAPTCHA integration and mandate automated integration tests in CI to verify URL normalization. Farah, what is your delivery schedule for the incident documentation?
 
-Nathan Scott: The external auditors flagged two critical items: first, we still had four legacy AWS IAM user accounts with static, long-lived access keys in our CI/CD deployment pipelines; second, bastion access to our production Kubernetes nodes still permitted password-backed SSH keys rather than hardware-enforced WebAuthn authentication.
+Farah Al-Hassan: I am compiling the forensic evidence, timeline logs, and mitigation steps. I will publish the finalized, peer-reviewed Post-Mortem Incident Report INC-8492 to our internal security wiki and executive risk repository by Thursday, October 19th at 4:00 PM.
 
-Zoe Chen: The SOC-2 Type II surveillance audit submission window closes on October 31st. If we fail to demonstrate full remediation of both items, the auditors will issue a qualified finding on our CC6.1 Logical Access Controls criteria.
+Alexander Wright: Excellent. Now let's turn to our SOC-2 Type II surveillance audit. Zoe, where do we stand with the external auditors from Schellman & Company?
 
-Nathan Scott: I have already built the replacement architecture. We are migrating GitHub Actions to AWS IAM OpenID Connect (OIDC) federation, which eliminates all static secrets by generating short-lived 15-minute temporary STS tokens. Furthermore, we are rolling out Teleport Zero-Trust Bastion access requiring hardware FIDO2 YubiKeys for all production infrastructure sessions.
+Zoe Chen: Thanks, Alexander. Our official 12-month SOC-2 Type II audit reporting window closes on October 31st. Schellman completed their interim fieldwork last week. Out of 84 trust services criteria evaluated, they issued green status on 82 controls. However, they issued high-risk audit inquiry notices on two specific controls under CC6.1 Logical and Physical Access Controls: first, they discovered four legacy AWS IAM user accounts in our production AWS organization that utilized static, long-lived access keys in GitHub Actions CI/CD pipelines instead of temporary credentials; second, they noted that SSH bastion access to our Kubernetes worker nodes permitted password-based authentication rather than hardware-enforced Multi-Factor Authentication.
 
-Alexander Wright: Decision: all static AWS IAM keys will be revoked, and hardware FIDO2 MFA will be mandatory for all production engineering access. Nathan, what is the completion deadline?
+Nathan Scott: I have already architected the complete remediation for both findings. For the CI/CD pipelines, we are deprecating all static AWS IAM access keys and migrating our GitHub Actions workflows to AWS IAM OpenID Connect (OIDC) federation. With OIDC, GitHub Actions requests short-lived 15-minute temporary AWS STS security tokens directly via cryptographic JSON Web Tokens (JWT), eliminating all permanent access keys from our repository secrets.
 
-Nathan Scott: I will complete the rotation of all AWS KMS encryption keys, revoke the legacy IAM credentials, and migrate all GitHub Actions runners to IAM OIDC by Monday, October 23rd at 5:00 PM.
+Alexander Wright: And what about the bastion SSH access for infrastructure engineers?
 
-Zoe Chen: Once Nathan completes that migration, I will compile the audit artifact trail, update our SOC-2 Evidence Packet, and submit the complete remediation package to the auditor on Monday, October 30th.
+Nathan Scott: We have deployed Teleport Enterprise Zero-Trust Access Gateway in our management VPC. Teleport integrates directly with our Okta identity provider and mandates hardware FIDO2 WebAuthn security keys—such as YubiKeys—for all SSH, Kubernetes kubectl, and database bastion sessions. All active terminal sessions are cryptographically recorded and audited in real time, completely eliminating static SSH keypairs.
 
-Alexander Wright: Excellent. In parallel, I will schedule and conduct a mandatory security and credential hygiene refresher workshop for the entire engineering organization on Thursday, November 2nd.
+Alexander Wright: Decision: all static AWS IAM keys will be completely revoked and deleted, and hardware FIDO2 authentication via Teleport is officially mandatory for 100% of engineering infrastructure access. Nathan, when will the migration be finalized in production?
 
-Farah Al-Hassan: That covers all identified risk vectors.
+Nathan Scott: I will execute the rotation of all AWS KMS master encryption keys, migrate all 34 GitHub Actions deployment workflows to IAM OIDC, and enforce Teleport FIDO2 hardware authentication by Monday, October 23rd at 5:00 PM.
 
-Alexander Wright: Outstanding response from everyone. Meeting adjourned.
+Zoe Chen: Once Nathan completes the migration, my team will collect the CloudTrail audit logs, the OIDC trust policy manifests, and the Teleport session recordings. I will package the complete Remediation Evidence Dossier and formally submit it to the Schellman audit team on Monday, October 30th at 12:00 PM.
+
+Alexander Wright: Perfect timing. To ensure organizational compliance: I will schedule and conduct a mandatory Security Hygiene & Credential Management Workshop for the entire engineering and DevOps organization on Thursday, November 2nd at 1:00 PM.
+
+Farah Al-Hassan: That gives us end-to-end coverage across our incident response and compliance obligations.
+
+Alexander Wright: Outstanding execution, team. Thank you for your diligence and high security standards. Meeting adjourned.

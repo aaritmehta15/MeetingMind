@@ -2,46 +2,56 @@ Cloud Infrastructure & Architecture Migration Review
 Date: October 10, 2025 | Duration: 45 mins
 Participants: Marcus Vance (VP of Infrastructure), Elena Rostova (Principal Cloud Architect), Devon Brooks (Lead Site Reliability Engineer), Priya Sharma (Principal Database Engineer)
 
-Marcus Vance: Good morning, everyone. Thanks for joining. We have four key items on the docket today: our AWS compute spend optimization, the Aurora PostgreSQL sharding strategy, our Kubernetes ingress routing switch to Envoy, and the latency spikes we saw during last Friday's load spike. Elena, could you kick us off with the compute numbers?
+Marcus Vance: Good morning, everyone. Thanks for joining our weekly infrastructure sync. We have a packed agenda today covering four main areas: our AWS compute spend optimization, the Aurora PostgreSQL database contention issues from last Friday's traffic surge, our Kubernetes ingress routing migration to Envoy, and the latency regressions we observed on payment endpoints. Before we dive into solutions, let's look at the financial numbers. Elena, could you walk us through the September AWS cost breakdown?
 
-Elena Rostova: Absolutely, Marcus. In September, our total AWS cloud infrastructure bill hit $142,000, which is approximately 18% over our quarterly operating budget. The primary driver was our on-demand c5.4xlarge compute instances running in us-east-1 for the background video processing cluster.
+Elena Rostova: Thanks, Marcus. I pulled the AWS Cost Explorer reports yesterday afternoon. In September, our total AWS cloud infrastructure bill reached $142,480. That is approximately 18% over our forecasted quarterly budget of $120,000 per month. When we broke down the line items by service, EC2 on-demand compute accounted for nearly 62% of the total expenditure, totaling $88,300. The primary cost driver continues to be our video transcoding and background ingestion cluster running in the us-east-1 region.
 
-Devon Brooks: Right. We analyzed the CPU utilization across those worker nodes, and average utilization hovers around 34% during non-peak hours, with sharp spikes up to 92% between 2:00 PM and 6:00 PM UTC.
+Devon Brooks: Right. To add some telemetry context to what Elena just mentioned, we analyzed the CloudWatch and Datadog CPU utilization graphs across that worker fleet over the past 30 days. Average CPU utilization across the 48 c5.4xlarge instances hovers around 34% during off-peak hours, specifically between 1:00 AM and 10:00 AM UTC. However, during our peak enterprise ingestion windows between 2:00 PM and 6:00 PM UTC, utilization spikes sharply to 92%, causing queue depths in SQS to back up past 40,000 messages.
 
-Marcus Vance: What is the plan to bring that run rate down without degrading our 99.95% availability SLA?
+Marcus Vance: That is a classic capacity planning mismatch. We are essentially paying for peak headroom 24 hours a day. Devon, what is our target run rate, and what options do we have on the table?
 
-Elena Rostova: We evaluated two alternatives. Option A was purchasing a 3-year Compute Savings Plan, which locks in a 42% discount but limits our architectural flexibility. Option B is migrating the cluster to Amazon EKS utilizing Graviton3 ARM64 instance types with Karpenter dynamic auto-scaling. 
+Devon Brooks: Our objective is to bring total compute spend down below $65,000 a month while maintaining our strict 99.95% API availability SLA and keeping our P99 processing latency under 2.5 seconds. Elena and I spent the last week evaluating two distinct architectural paths.
 
-Devon Brooks: I strongly advocate for Option B. Karpenter can spin up spot instances during burst workloads and scale down to zero idle nodes within 90 seconds. Based on our staging benchmarks, migrating to Graviton3 ARM instances will reduce our monthly compute spend from $142,000 down to roughly $94,000, delivering a net 33% cost reduction.
+Elena Rostova: Option A was committing to a 3-year EC2 Instance Savings Plan. That would immediately reduce our hourly compute rates by roughly 42% for fixed instance families, bringing our monthly compute bill to around $82,000. However, the downside is severe vendor and architecture lock-in. If we want to change instance families, adopt newer silicon, or shift container workloads across regions in the next 36 months, we are stuck paying for underutilized reserved capacity.
 
-Marcus Vance: Are all our Docker container dependencies and shared C-libraries verified for ARM64 compatibility?
+Marcus Vance: What is Option B?
 
-Elena Rostova: Yes. Our CI/CD pipeline in GitHub Actions already builds multi-arch container manifests for amd64 and arm64. We ran the test suite across all 18 microservices and passed 100% of integration tests.
+Elena Rostova: Option B is modernizing the cluster onto Amazon EKS using AWS Graviton3 ARM64 instance types—specifically the c7g.2xlarge and c7g.4xlarge families—paired with Karpenter for just-in-time, node-level autoscaling. Unlike the standard Kubernetes Cluster Autoscaler, which takes 4 to 6 minutes to provision EC2 nodes and register them with the control plane, Karpenter provisions right-sized spot and on-demand nodes directly from the EC2 fleet API in under 45 seconds.
 
-Marcus Vance: Excellent. Let's make that an official decision: we will proceed with Option B, migrating the background compute cluster to EKS Graviton3 with Karpenter autoscaling. Elena, what is the timeline on the Terraform provisioning?
+Devon Brooks: In our staging environment tests over the weekend, Karpenter dynamically scaled down our staging cluster to zero idle worker nodes when the SQS queues emptied, and scaled up 20 Graviton3 instances within 90 seconds when we fired a synthetic load test of 50,000 jobs. Because Graviton3 delivers a 25% price-performance advantage over comparable x86 c5 instances, combined with Karpenter's aggressive bin-packing, we estimate our monthly compute bill will drop from $88,300 down to approximately $38,000. That brings our total monthly AWS bill to around $92,000—a net savings of over $50,000 every month.
 
-Elena Rostova: I can have the Terraform modules for the staging VPC and EKS node groups completed and submit the pull request by Thursday, October 12th.
+Marcus Vance: That is a massive financial delta. But what is the technical risk? Are all our Docker container dependencies, native shared C-libraries, FFmpeg binaries, and Python wheels validated for ARM64 architecture?
 
-Marcus Vance: Perfect. Now let's turn to database performance. Priya, what did the audit show regarding Aurora PostgreSQL latency under high concurrency?
+Elena Rostova: We conducted a full dependency audit across all 18 background microservices. Three weeks ago, we updated our GitHub Actions CI/CD pipeline with Docker Buildx to build multi-architecture container images supporting both `linux/amd64` and `linux/arm64`. We ran our complete automated integration and regression test suites against the ARM64 staging cluster, and all 412 unit tests and 86 end-to-end integration tests passed with zero errors. In fact, video transcode encoding times on Graviton3 were 14% faster than on the legacy Intel c5 instances.
 
-Priya Sharma: We saw significant locking contention on the central `workspace_events` table during the enterprise batch imports last week. P99 query latency degraded to 850 milliseconds, causing upstream HTTP 504 gateway timeouts on the REST API.
+Marcus Vance: That gives me high confidence. Let's make an executive decision: we will approve Option B. We are officially adopting Amazon EKS with Graviton3 ARM64 instances and Karpenter autoscaling, and rejecting the 3-year Savings Plan. Elena, what is the implementation plan and timeline for Terraform provisioning?
 
-Devon Brooks: Our Prometheus metrics corroborated that. The primary database writer instance CPU peaked at 96%, and read-replica replication lag surged to 4.2 seconds.
+Elena Rostova: I have already drafted the Terraform HCL modules for the new VPC peering connections, IAM OIDC roles for service accounts, and the Karpenter NodePool configurations. I will finish the peer review process, run Terraform plan against staging, and submit the final Pull Request by Thursday, October 12th at 4:00 PM.
 
-Marcus Vance: Did we evaluate migrating that table to CockroachDB or ScyllaDB?
+Marcus Vance: Excellent. Let's now pivot to the database layer. Last Friday at 3:15 PM EST, our incident alerts triggered when REST API latency breached 800 milliseconds, resulting in several HTTP 504 gateway timeouts for enterprise customers. Priya, walk us through the root cause analysis from the database perspective.
 
-Priya Sharma: We did an architectural spike on CockroachDB, but the query rewrites for our complex JSONB aggregation queries would require at least 6 weeks of engineering effort and introduce consistency edge cases. Instead, I recommend implementing horizontal table sharding by `organization_id` on Aurora PostgreSQL and adding an ElastiCache Redis cluster for session caching and read-heavy lookups.
+Priya Sharma: Thanks, Marcus. During Friday's enterprise batch import window, customer organizations were simultaneously syncing hundreds of thousands of historical records. Our primary Aurora PostgreSQL writer instance, which is a `db.r6g.4xlarge`, experienced intense lock contention on the central `workspace_events` table. Specifically, our transactional update queries were competing with long-running analytical aggregation queries, causing PostgreSQL's active connection pool to saturate all 500 available backend connections.
 
-Elena Rostova: That makes total sense. We can keep our existing ORM models while eliminating 75% of read queries hitting the primary writer.
+Devon Brooks: Our Datadog APM dashboards showed database CPU utilization pinned at 98% for a sustained 22-minute period. Even worse, read-replica replication lag surged from our normal baseline of 12 milliseconds up to 4.8 seconds, which caused stale data reads on our customer-facing web application.
 
-Marcus Vance: Agreed. Decision reached: we will retain Aurora PostgreSQL, implement horizontal sharding by organization ID, and provision a Redis caching layer rather than undertaking a full database engine replacement. Priya, when can you deliver the load benchmark results?
+Marcus Vance: Did we investigate migrating this high-throughput events table to a distributed SQL engine like CockroachDB or a NoSQL datastore like ScyllaDB?
 
-Priya Sharma: I will run the simulated 100,000 concurrent user load test on the 8-shard staging cluster and share the Grafana performance dashboards by Monday, October 16th at 12:00 PM.
+Priya Sharma: Yes, we evaluated both over a two-week architectural spike. While CockroachDB handles horizontal write scaling very well, migrating our transactional schemas would require completely rewriting over 40 complex SQL queries that rely heavily on JSONB operators, recursive Common Table Expressions (CTEs), and window functions. Our team estimated that the schema migration and application layer refactoring would take at least 8 to 10 weeks of dedicated engineering time, creating a major delay for our Q4 product roadmap.
 
-Devon Brooks: On the SRE side, I will configure the Datadog synthetic monitors, set up automated P99 latency alerts for all payment and auth endpoints, and distribute the updated runbooks by Friday, October 13th at 5:00 PM.
+Elena Rostova: In addition to the engineering cost, running a dedicated CockroachDB dedicated cluster with multi-region replication would add at least $14,000 a month in hosting licensing and cross-AZ data egress fees.
 
-Marcus Vance: Great work, Devon. Lastly, on the financial side, I will prepare the revised cloud infrastructure forecast capping our monthly burn at $95,000 and present the proposal to the CFO and executive committee on Wednesday, October 18th.
+Priya Sharma: Exactly. Instead, I propose a two-phase optimization within our existing Aurora PostgreSQL architecture. Phase one is implementing native declarative table partitioning on `workspace_events` using hash partitioning by `organization_id` across 16 partition tables. Phase two is introducing an ElastiCache Redis cluster running Redis 7.2 with cluster mode enabled to serve as a read-through cache for user session state, workspace metadata, and frequent lookup queries.
 
-Elena Rostova: Sounds like a solid roadmap.
+Devon Brooks: That caching layer alone will offload an estimated 70% of read queries from the primary Aurora writer. Furthermore, because Redis operates sub-millisecond in-memory, our P95 read latency for workspace metadata should drop from 45 milliseconds down to under 4 milliseconds.
 
-Marcus Vance: Thanks everyone for the focus today. Let's execute on these commitments. Meeting adjourned.
+Marcus Vance: That is a far more pragmatic and cost-effective approach than replacing the database engine. Let's make that a formal decision: we will retain Aurora PostgreSQL, implement hash table partitioning by organization ID on the events table, and deploy an ElastiCache Redis caching cluster. Priya, what is your delivery schedule for the benchmark results?
+
+Priya Sharma: I am finishing the data migration script to backfill historical partitions in staging. I will execute a simulated load test mimicking 150,000 concurrent user operations on the 16-partition cluster and publish the complete Grafana performance dashboards and query latency metrics by Monday, October 16th at 12:00 PM.
+
+Devon Brooks: On the SRE and observability front, I will take the lead on monitoring and alerting. I will configure Datadog synthetic monitors to ping our payment and authentication endpoints every 30 seconds from five global regions, establish automated Slack and PagerDuty alerts for P99 latency breaches exceeding 300 milliseconds, and publish the updated incident response runbook by Friday, October 13th at 5:00 PM.
+
+Marcus Vance: Perfect, Devon. To wrap up the infrastructure portfolio: on the executive and commercial side, I will consolidate our projected infrastructure spend reduction—capping our monthly AWS budget at $95,000 starting in November—and present the revised Q4 infrastructure budget and ROI model to the CFO and executive committee on Wednesday, October 18th at 10:00 AM.
+
+Elena Rostova: This is a clear, actionable roadmap. We have distinct owners and verifiable milestones across every track.
+
+Marcus Vance: Exactly. Thank you all for the diligent preparation and engineering rigor. Let's execute cleanly on these commitments. Meeting adjourned.
