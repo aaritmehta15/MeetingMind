@@ -1,0 +1,47 @@
+Enterprise Platform V2 General Availability Launch Review
+Date: October 11, 2025 | Duration: 50 mins
+Participants: Samantha Reed (Head of Product), Liam Zhao (Staff Frontend Architect), Chloe Dupont (Lead Product Designer), Tariq Mansoor (Billing & Payments Lead), Karen Miller (VP of Customer Success)
+
+Samantha Reed: Welcome everyone. We are three weeks out from our planned General Availability launch of Enterprise Platform V2 on November 3rd. Today's objective is to review our blocker burn-down, sign off on billing workflows, evaluate the enterprise permissions matrix UI, and confirm whether we can hit our GA target without compromising reliability. Liam, let's start with frontend stability.
+
+Liam Zhao: Thanks, Samantha. On the frontend, 94% of our enterprise test suite is passing. However, we discovered a P0 blocker during cross-browser regression testing on macOS and iOS Safari. Safari's Intelligent Tracking Prevention (ITP) blocks third-party session cookies during the Okta SAML 2.0 single sign-on redirect loop.
+
+Chloe Dupont: Several beta enterprise testers reported being trapped in an infinite login loop when attempting to authenticate through their corporate Okta dashboard.
+
+Samantha Reed: What is the remediation strategy for the Safari WebKit authentication issue?
+
+Liam Zhao: We need to rewrite the authentication handshake to utilize secure, HTTP-only, SameSite=Lax authorization code exchange tokens stored in server-side sessions rather than relying on client-side iframe cookie handshakes. I have already drafted the architectural fix with our security team, but it requires two days of backend API adjustments and three days of end-to-end Cypress regression testing.
+
+Tariq Mansoor: How does that affect the billing integration timeline?
+
+Liam Zhao: I will need full focus on this through Tuesday, October 17th. I can guarantee a merged pull request and production-ready patch by 5:00 PM next Tuesday.
+
+Samantha Reed: Understood. Let's make an executive decision: because seamless enterprise SSO is a mandatory requirement for Fortune 500 customers, we will delay our General Availability launch date by exactly one week, moving the launch from November 3rd to Friday, November 10th. Tariq, what is the status of the Stripe enterprise billing migration?
+
+Tariq Mansoor: We completed the migration away from our custom checkout tokens to the unified Stripe Customer Portal and Tiered Invoicing API. All automated proration calculations for mid-cycle seat additions are working properly in sandbox mode.
+
+Karen Miller: What happens if an enterprise customer pays via ACH bank transfer instead of a corporate credit card?
+
+Tariq Mansoor: We built an asynchronous webhook handler that grants provisional 7-day workspace access while the ACH micro-deposit verification clears. If the bank settlement fails, automated dunning emails are triggered and the workspace is safely downgraded to read-only mode after 14 days.
+
+Samantha Reed: That's a critical safeguard for Customer Success. Tariq, when will end-to-end sandbox verification for multi-currency invoicing be completed?
+
+Tariq Mansoor: I will finalize the Stripe webhook idempotent replay test suite and verify multi-currency EUR and GBP invoicing by Friday, October 20th at 3:00 PM.
+
+Chloe Dupont: Moving to UX: we completed usability interviews with 12 enterprise workspace administrators regarding the new Role-Based Access Control (RBAC) Permissions Matrix. Feedback was overwhelmingly positive, but users requested a bulk-assign role toggle and an audit-trail preview before committing permission changes.
+
+Samantha Reed: Can we incorporate those two enhancements before GA?
+
+Chloe Dupont: Yes. I have already updated the Figma design tokens and component specs. I will deliver the finalized high-fidelity design specifications and interaction prototypes for the permissions matrix to the frontend engineering team by tomorrow, October 12th at 2:00 PM.
+
+Karen Miller: From the Customer Success and Support standpoint, we have identified a pilot cohort of 25 enterprise customer accounts who agreed to participate in our early access program.
+
+Samantha Reed: How will we manage their onboarding?
+
+Karen Miller: My team will host three live onboarding workshops and publish the updated administrative knowledge-base documentation. I will have all 25 customer champion training sessions scheduled and the help center documentation published by Wednesday, October 25th.
+
+Samantha Reed: Fantastic coordination. To close the loop: I will draft the official Executive Launch Memo detailing the adjusted November 10th GA date and distribute it to all C-suite stakeholders by end of day today, October 11th.
+
+Liam Zhao: Sounds like a clear path forward.
+
+Samantha Reed: Thank you all for the hard work and transparency. Let's make this launch a massive success.

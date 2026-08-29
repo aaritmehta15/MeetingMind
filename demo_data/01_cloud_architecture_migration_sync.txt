@@ -1,0 +1,47 @@
+Cloud Infrastructure & Architecture Migration Review
+Date: October 10, 2025 | Duration: 45 mins
+Participants: Marcus Vance (VP of Infrastructure), Elena Rostova (Principal Cloud Architect), Devon Brooks (Lead Site Reliability Engineer), Priya Sharma (Principal Database Engineer)
+
+Marcus Vance: Good morning, everyone. Thanks for joining. We have four key items on the docket today: our AWS compute spend optimization, the Aurora PostgreSQL sharding strategy, our Kubernetes ingress routing switch to Envoy, and the latency spikes we saw during last Friday's load spike. Elena, could you kick us off with the compute numbers?
+
+Elena Rostova: Absolutely, Marcus. In September, our total AWS cloud infrastructure bill hit $142,000, which is approximately 18% over our quarterly operating budget. The primary driver was our on-demand c5.4xlarge compute instances running in us-east-1 for the background video processing cluster.
+
+Devon Brooks: Right. We analyzed the CPU utilization across those worker nodes, and average utilization hovers around 34% during non-peak hours, with sharp spikes up to 92% between 2:00 PM and 6:00 PM UTC.
+
+Marcus Vance: What is the plan to bring that run rate down without degrading our 99.95% availability SLA?
+
+Elena Rostova: We evaluated two alternatives. Option A was purchasing a 3-year Compute Savings Plan, which locks in a 42% discount but limits our architectural flexibility. Option B is migrating the cluster to Amazon EKS utilizing Graviton3 ARM64 instance types with Karpenter dynamic auto-scaling. 
+
+Devon Brooks: I strongly advocate for Option B. Karpenter can spin up spot instances during burst workloads and scale down to zero idle nodes within 90 seconds. Based on our staging benchmarks, migrating to Graviton3 ARM instances will reduce our monthly compute spend from $142,000 down to roughly $94,000, delivering a net 33% cost reduction.
+
+Marcus Vance: Are all our Docker container dependencies and shared C-libraries verified for ARM64 compatibility?
+
+Elena Rostova: Yes. Our CI/CD pipeline in GitHub Actions already builds multi-arch container manifests for amd64 and arm64. We ran the test suite across all 18 microservices and passed 100% of integration tests.
+
+Marcus Vance: Excellent. Let's make that an official decision: we will proceed with Option B, migrating the background compute cluster to EKS Graviton3 with Karpenter autoscaling. Elena, what is the timeline on the Terraform provisioning?
+
+Elena Rostova: I can have the Terraform modules for the staging VPC and EKS node groups completed and submit the pull request by Thursday, October 12th.
+
+Marcus Vance: Perfect. Now let's turn to database performance. Priya, what did the audit show regarding Aurora PostgreSQL latency under high concurrency?
+
+Priya Sharma: We saw significant locking contention on the central `workspace_events` table during the enterprise batch imports last week. P99 query latency degraded to 850 milliseconds, causing upstream HTTP 504 gateway timeouts on the REST API.
+
+Devon Brooks: Our Prometheus metrics corroborated that. The primary database writer instance CPU peaked at 96%, and read-replica replication lag surged to 4.2 seconds.
+
+Marcus Vance: Did we evaluate migrating that table to CockroachDB or ScyllaDB?
+
+Priya Sharma: We did an architectural spike on CockroachDB, but the query rewrites for our complex JSONB aggregation queries would require at least 6 weeks of engineering effort and introduce consistency edge cases. Instead, I recommend implementing horizontal table sharding by `organization_id` on Aurora PostgreSQL and adding an ElastiCache Redis cluster for session caching and read-heavy lookups.
+
+Elena Rostova: That makes total sense. We can keep our existing ORM models while eliminating 75% of read queries hitting the primary writer.
+
+Marcus Vance: Agreed. Decision reached: we will retain Aurora PostgreSQL, implement horizontal sharding by organization ID, and provision a Redis caching layer rather than undertaking a full database engine replacement. Priya, when can you deliver the load benchmark results?
+
+Priya Sharma: I will run the simulated 100,000 concurrent user load test on the 8-shard staging cluster and share the Grafana performance dashboards by Monday, October 16th at 12:00 PM.
+
+Devon Brooks: On the SRE side, I will configure the Datadog synthetic monitors, set up automated P99 latency alerts for all payment and auth endpoints, and distribute the updated runbooks by Friday, October 13th at 5:00 PM.
+
+Marcus Vance: Great work, Devon. Lastly, on the financial side, I will prepare the revised cloud infrastructure forecast capping our monthly burn at $95,000 and present the proposal to the CFO and executive committee on Wednesday, October 18th.
+
+Elena Rostova: Sounds like a solid roadmap.
+
+Marcus Vance: Thanks everyone for the focus today. Let's execute on these commitments. Meeting adjourned.

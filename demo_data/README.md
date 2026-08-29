@@ -1,50 +1,59 @@
-# 📁 Meeting Intelligence Benchmark & Evaluation Datasets
+# 📁 Enterprise Meeting Intelligence Benchmark Datasets
 
-This repository module contains curated meeting transcripts designed for validating, benchmarking, and demonstrating the **MeetingMind Intelligence Engine**. 
+This directory contains standardized, long-form enterprise meeting datasets engineered to benchmark, evaluate, and demonstrate the full capabilities of the **MeetingMind Intelligence Engine**.
 
-These datasets serve as standardized test suites for evaluating multi-speaker diarization, semantic context preservation, deterministic citation verification, and cross-meeting Hierarchical RAG search.
+These transcripts simulate real-world executive, engineering, security, and commercial conversations—featuring multi-turn speaker dynamics, complex technical trade-offs, financial metrics, conflicting timelines, and grounded deliverable commitments.
 
 ---
 
-## 📊 Dataset Catalog & Benchmark Scenarios
+## 📊 Dataset Catalog & Evaluation Scenarios
 
-| Dataset File | Domain / Context | Primary Evaluation Target | Key Characteristics |
+| Benchmark Dataset | Domain & Context | Participants | Key Evaluation Capabilities |
 | :--- | :--- | :--- | :--- |
-| `q1-planning-sarah.txt` | **Engineering & Product Sync** | Action Item & Deadline Extraction | Clear task allocation, sprint timelines, CI/CD tooling deliberations, and ownership handoffs. |
-| `dunder-mifflin-sales.txt` | **Enterprise Sales Strategy** | Disputed Ownership & Dialogue Disambiguation | Multi-stakeholder negotiation, conflicting account assignments, sales quotas, and cross-talk resolution. |
-| `mad-men-heinz.txt` | **Executive Client Campaign Review** | Decision Tracking & Strategic Pivots | High-stakes client objections, creative direction alignment, deliverable commitments, and strategic consensus. |
+| **`01_cloud_architecture_migration_sync.txt`** | **Cloud Infrastructure & Architecture Review**<br>*(AWS spend, EKS Graviton3, Aurora sharding)* | 4 Speakers<br>*(VP Infra, Cloud Architect, Lead SRE, Principal DB Eng)* | • Financial run-rate & cost-reduction calculation ($142k → $94k)<br>• Technical decision extraction (EKS vs Savings Plan, Aurora vs CockroachDB)<br>• Hard deadlines with exact date/time attribution |
+| **`02_q3_crossfunctional_product_launch.txt`** | **Cross-Functional Product Launch & Readiness**<br>*(GA timeline, Safari SSO blocker, Stripe Billing)* | 5 Speakers<br>*(Head of Product, Frontend Arch, Lead Designer, Billing Lead, VP CS)* | • Cross-browser blocker triage & timeline adjustment (delay to Nov 10)<br>• Third-party integration verification (Stripe ACH & webhooks)<br>• Multidisciplinary task handoffs (Figma design specs, Cypress tests) |
+| **`03_security_incident_postmortem_audit.txt`** | **Security Incident Post-Mortem & SOC-2 Audit**<br>*(WAF rate-limit bypass, OIDC, Teleport MFA)* | 4 Speakers<br>*(CISO, Lead AppSec Eng, Staff DevOps Eng, Compliance Dir)* | • Root-cause analysis & severity triage (INC-8492 credential stuffing)<br>• Compliance audit remediation (SOC-2 Type II CC6.1 criteria)<br>• Security policy decision tracking (hardware FIDO2 WebAuthn keys) |
+| **`04_enterprise_client_qbr_negotiation.txt`** | **Enterprise Commercial QBR & Expansion**<br>*(Multi-year contract, EU data residency, SLA terms)* | 4 Speakers<br>*(Enterprise AE, Client CTO, VP Solutions Eng, Legal Counsel)* | • High-stakes contract terms negotiation ($480,000 multi-year)<br>• Regulatory & sovereignty compliance (Frankfurt AWS eu-central-1 CMEK)<br>• Service Level Agreement guarantees (99.99% uptime with 15m P0 response) |
 
 ---
 
-## 🎯 Evaluation Objectives
+## 🎯 Technical Evaluation Objectives
 
-Each transcript is engineered to stress-test specific capabilities of the MeetingMind NLP pipeline:
+These datasets are specifically formatted to stress-test MeetingMind across four core dimensions:
 
-1. **Deterministic Citation Grounding**: Validating that every extracted action item and decision links strictly to verbatim conversational spans without speculative extrapolation.
-2. **Ambiguity & Conflict Resolution**: Disambiguating overlapping claims (e.g., disputed account ownership or conflicting timeline estimates) to verify truthful model extraction.
-3. **Hierarchical Parent-Child RAG**: Testing vector retrieval precision across granular child dialogue turns while preserving 5-turn parent context for conversational coherence.
-4. **Automated Deliverable Generation**: Powering instant conversion into Executive Briefs, Jira/Linear formatted tasks, Action-Oriented Follow-up Emails, and Slack Standup summaries.
+1. **Deterministic Citation Grounding (0% Hallucinations)**:
+   - Evaluates whether the extraction engine anchors every generated action item, owner, and deadline strictly to exact verbatim substring spans from the transcript dialogue.
+2. **Ambiguity & Disputed Timeline Disambiguation**:
+   - Tests the model's ability to distinguish between initial exploratory proposals, dissenting objections, and final consensus decisions made by the group.
+3. **Hierarchical Parent-Child RAG Precision**:
+   - Tests vector search precision over granular speaker turns (child chunks) while expanding to 5-turn parent windows to answer contextual questions without conversational context loss.
+4. **Automated Cross-Tool Formatting**:
+   - Tests one-click deliverable generation: Executive Briefs, Jira/Linear markdown tickets, formal Client and Internal Follow-up Emails, and Slack/Teams broadcasts.
 
 ---
 
 ## 🔒 Enterprise Compliance & Data Integrity
 
-- **Clean Anonymization**: All datasets are thoroughly curated and sanitized, ensuring zero exposure of proprietary enterprise data, confidential financials, or sensitive internal credentials.
-- **Zero PII Footprint**: Fully compliant with enterprise privacy standards and safe for open demonstration, continuous integration (CI) tests, and multi-provider LLM benchmarking.
-- **Reproducible Baseline**: Provides consistent, deterministic input for testing extraction models across OpenAI, Groq (Llama-3), Google Gemini, and local Ollama deployments.
+- **Anonymized Enterprise Standards**: All benchmarks are sanitized and structured to mirror Fortune 500 operational syncs without exposing real-world proprietary intellectual property.
+- **Zero PII Exposure**: Completely free from confidential personal data, internal keys, or live infrastructure secrets.
+- **Deterministic Evaluation Baseline**: Serves as a repeatable benchmark suite for comparing Groq (Llama-3), Google Gemini, and local Ollama models.
 
 ---
 
-## 🚀 Usage in MeetingMind
+## 🚀 Running Benchmarks in MeetingMind
 
-These datasets can be loaded directly through:
-- **Extraction Studio**: Select any pre-loaded sample from the dropdown or paste the transcript to run instant structured extraction and citation verification.
-- **Corpus Studio**: Ingest and index the files into the persistent FAISS vector corpus for cross-meeting multi-document queries.
-- **CLI & Automated Testing**:
-  ```bash
-  # Run structured extraction on sample sync
-  python cli.py extract demo_data/q1-planning-sarah.txt
+### 1. In the Web UI
+- **Extraction Studio**: Open the pre-loaded transcript dropdown or paste any benchmark file to extract structured action items and citations.
+- **Query Hub / Corpus Studio**: Ingest all four benchmark meetings to run cross-meeting synthesis and multi-document queries (e.g., *"What infrastructure and compliance commitments were agreed to for European expansion?"*).
 
-  # Execute semantic RAG search across sample meetings
-  python cli.py search demo_data/dunder-mifflin-sales.txt "who owns the manufacturing accounts"
-  ```
+### 2. Via CLI
+```bash
+# Run structured extraction on cloud architecture sync
+python cli.py extract demo_data/01_cloud_architecture_migration_sync.txt
+
+# Run semantic RAG search across security audit
+python cli.py search demo_data/03_security_incident_postmortem_audit.txt "what was the root cause of the WAF bypass"
+
+# Build persistent multi-meeting corpus across all four benchmarks
+python cli.py corpus-build demo_data --corpus-dir corpus
+```

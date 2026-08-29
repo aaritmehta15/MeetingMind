@@ -103,11 +103,11 @@ const SAMPLE_QUESTIONS = [
   "Analyze the sentiment and emotional tone of each speaker in this meeting.",
   "Show me speaker participation stats: who spoke the most and who asked the most questions?",
   "Extract all deadlines and create a chronological timeline for this meeting.",
-  "What were the top recurring keywords and phrases discussed?",
-  "Verify if the claim 'Edd agreed to finish the budget by Friday' is grounded in the transcript.",
-  "What did Edd commit to do, and by when?",
-  "If the Q3 budget is $50,000 and we spent $12,500, calculate remaining %.",
-  "Who is Heinz as a company? Search the web.",
+  "What were the top recurring technical decisions and architectural trade-offs discussed?",
+  "Verify if the claim 'Elena committed to submitting the Terraform PR by Thursday' is grounded in the transcript.",
+  "What decisions were made regarding AWS compute spend optimization and database sharding?",
+  "If the monthly AWS bill is $142,000 and Graviton3 reduces it to $94,000, calculate total annual savings.",
+  "What are the non-negotiable enterprise requirements for EU data residency in Frankfurt?",
 ];
 
 export default function AgentChat({ examples, provider }) {

@@ -1,0 +1,41 @@
+Security Incident Post-Mortem & SOC-2 Type II Audit Review
+Date: October 12, 2025 | Duration: 55 mins
+Participants: Alexander Wright (Chief Information Security Officer), Farah Al-Hassan (Lead Application Security Engineer), Nathan Scott (Staff DevOps Engineer), Zoe Chen (Director of Compliance & Governance)
+
+Alexander Wright: Good afternoon, team. Thank you for assembling on short notice. Today we are conducting the formal post-incident review for Incident INC-8492, which occurred on Tuesday evening, followed by an operational checkpoint on our upcoming SOC-2 Type II annual surveillance audit. Farah, please provide the technical breakdown of the incident.
+
+Farah Al-Hassan: At 18:22 UTC on Tuesday, October 9th, our monitoring systems detected an anomalous traffic spike of 45,000 requests per minute directed at our `/api/v1/auth/password-reset` endpoint originating from a distributed botnet across 3,200 unique IP addresses.
+
+Nathan Scott: Our backend authentication service experienced CPU saturation, which resulted in a 4-minute elevated latency period where 6% of legitimate user login requests returned HTTP 503 service unavailable errors.
+
+Alexander Wright: Was there any unauthorized access or compromise of customer personal identifiable data?
+
+Farah Al-Hassan: We conducted forensic verification across all server logs and database write queries. There was zero unauthorized access, zero account takeovers, and zero data exfiltration. The automated credential stuffing attack was halted by our secondary Redis account-lockout heuristics. However, the root cause was an improper bypass rule in our Cloudflare WAF configuration where path-based rate limiting was inadvertently skipped for query parameters containing specific escape sequences.
+
+Alexander Wright: How do we ensure this can never recur across any public authentication routes?
+
+Farah Al-Hassan: We have re-architected the edge security policy. We will enforce Cloudflare WAF token-bucket rate limiting strictly at the edge layer, capping requests to 100 requests per minute per IP address on all `/api/v1/auth/*` endpoints regardless of headers or query arguments.
+
+Alexander Wright: Agreed. Decision: enforce strict edge-level Cloudflare rate limiting across all authentication endpoints and implement automated WAF regression integration tests in CI. Farah, when can you deliver the final sanitized incident report?
+
+Farah Al-Hassan: I will publish the finalized, peer-reviewed Post-Mortem Incident Report INC-8492 to our internal security portal and executive repository by Thursday, October 19th at 4:00 PM.
+
+Alexander Wright: Nathan, what about our SOC-2 Type II audit remediation for access controls?
+
+Nathan Scott: The external auditors flagged two critical items: first, we still had four legacy AWS IAM user accounts with static, long-lived access keys in our CI/CD deployment pipelines; second, bastion access to our production Kubernetes nodes still permitted password-backed SSH keys rather than hardware-enforced WebAuthn authentication.
+
+Zoe Chen: The SOC-2 Type II surveillance audit submission window closes on October 31st. If we fail to demonstrate full remediation of both items, the auditors will issue a qualified finding on our CC6.1 Logical Access Controls criteria.
+
+Nathan Scott: I have already built the replacement architecture. We are migrating GitHub Actions to AWS IAM OpenID Connect (OIDC) federation, which eliminates all static secrets by generating short-lived 15-minute temporary STS tokens. Furthermore, we are rolling out Teleport Zero-Trust Bastion access requiring hardware FIDO2 YubiKeys for all production infrastructure sessions.
+
+Alexander Wright: Decision: all static AWS IAM keys will be revoked, and hardware FIDO2 MFA will be mandatory for all production engineering access. Nathan, what is the completion deadline?
+
+Nathan Scott: I will complete the rotation of all AWS KMS encryption keys, revoke the legacy IAM credentials, and migrate all GitHub Actions runners to IAM OIDC by Monday, October 23rd at 5:00 PM.
+
+Zoe Chen: Once Nathan completes that migration, I will compile the audit artifact trail, update our SOC-2 Evidence Packet, and submit the complete remediation package to the auditor on Monday, October 30th.
+
+Alexander Wright: Excellent. In parallel, I will schedule and conduct a mandatory security and credential hygiene refresher workshop for the entire engineering organization on Thursday, November 2nd.
+
+Farah Al-Hassan: That covers all identified risk vectors.
+
+Alexander Wright: Outstanding response from everyone. Meeting adjourned.

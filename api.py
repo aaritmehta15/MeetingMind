@@ -134,8 +134,8 @@ def get_status():
 
 @app.get("/api/examples")
 def get_examples():
-    """Returns a list of sample transcripts from the examples directory."""
-    examples_dir = Path("examples")
+    """Returns a list of sample transcripts from the demo_data or examples directory."""
+    examples_dir = Path("demo_data") if Path("demo_data").exists() else Path("examples")
     if not examples_dir.exists():
         return []
     

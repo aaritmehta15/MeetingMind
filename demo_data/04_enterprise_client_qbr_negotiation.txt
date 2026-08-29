@@ -1,0 +1,33 @@
+Enterprise Customer Expansion & QBR Contract Negotiation
+Date: October 13, 2025 | Duration: 40 mins
+Participants: David Sterling (Enterprise Account Executive), Dr. Aris Thorne (Chief Technology Officer, Apex Global Financial), Jessica Lin (VP of Solutions Engineering), Rachel Moore (Commercial & Legal Contracts Counsel)
+
+David Sterling: Good afternoon, Dr. Thorne. Thank you for making time for our Q4 Strategic Review and contract renewal discussion. We are excited about how Apex Global Financial has scaled its usage of MeetingMind across 1,400 active wealth managers over the past year.
+
+Dr. Aris Thorne: Thanks, David. Our investment bankers and research analysts have saved an estimated 12,000 hours of manual note-taking and compliance auditing over the last three quarters. However, as we look to expand this deployment globally to our London and Frankfurt trading desks, we have three non-negotiable enterprise requirements: dedicated EU data residency, custom single-tenant encryption keys, and an enhanced 99.99% High-Availability SLA with strict financial penalties for downtime.
+
+Jessica Lin: Dr. Thorne, I can speak to the technical architecture. We recently expanded our infrastructure to support multi-region tenant isolation. We can provision an isolated, single-tenant Kubernetes cluster in AWS Frankfurt (eu-central-1) where all meeting audio transcripts, vector embeddings, and database records remain strictly within the European Economic Area (EEA), fully satisfying GDPR Article 44 cross-border transfer requirements.
+
+Dr. Aris Thorne: What about key management? Our internal compliance policy mandates customer-managed encryption keys (CMEK) via AWS KMS HSMs where Apex holds the primary key material.
+
+Jessica Lin: Our enterprise architecture fully supports AWS KMS Key Policy delegation. You will retain sole ownership of the root cryptographic key material and can audit or revoke access at any time through your own AWS CloudTrail logs.
+
+Dr. Aris Thorne: That resolves our data sovereignty and InfoSec requirements. David, let's discuss commercial terms. We are looking at a 2-year enterprise commitment covering 3,500 total seats across North America and Europe. What is your proposed pricing structure?
+
+David Sterling: For a 2-year commitment at 3,500 seats with dedicated EU data residency and 24/7 dedicated Solutions Engineering support, our standard list price is $320,000 per year. In consideration of Apex Global Financial's multi-year partnership and global expansion, we are offering an enterprise rate of $240,000 annually, bringing the total 2-year contract value to $480,000.
+
+Dr. Aris Thorne: If we commit to the $480,000 contract, will you include the 99.99% monthly uptime SLA with a 15-minute response time for Severity-0 outages?
+
+David Sterling: Yes. We will formally codify the 99.99% availability SLA with 10% monthly invoice service credits if uptime falls below that threshold, backed by dedicated 15-minute engineer response times.
+
+Dr. Aris Thorne: That is acceptable. We have a deal. What are the immediate next steps to execute?
+
+David Sterling: I will generate the finalized Order Form and Master Services Agreement (MSA) reflecting the $480,000 contract value and Frankfurt deployment specifications by Friday, October 20th at 12:00 PM.
+
+Rachel Moore: On the legal side, I will prepare the customized Data Processing Addendum (DPA) incorporating EU Standard Contractual Clauses and the specialized SLA terms by Monday, October 23rd at 5:00 PM.
+
+Jessica Lin: On the engineering side, I will provision the dedicated Frankfurt staging tenant environment and share the secure API onboarding credentials with Dr. Thorne's platform team by Tuesday, October 24th at 2:00 PM.
+
+Dr. Aris Thorne: Perfect. Once our legal counsel reviews the DPA, I will present the contract to the Apex Procurement Executive Committee and execute the agreement via DocuSign by Thursday, November 2nd.
+
+David Sterling: Outstanding. Thank you Dr. Thorne for your continued partnership and trust. We look forward to powering Apex Global's worldwide operations.
