@@ -140,13 +140,15 @@ def load_ami_samples(
     Returns:
         List of AMISample objects, one per meeting.
     """
-    from datasets import load_dataset
+    from datasets import load_dataset, Audio
 
     ds = load_dataset(
         "edinburghcstr/ami",
         config,
         split=split,
     )
+    if "audio" in ds.column_names:
+        ds = ds.cast_column("audio", Audio(decode=False))
 
     # Drop audio column — it requires torchcodec to decode and we only need text
     audio_cols = [c for c in ds.column_names if "audio" in c.lower()]

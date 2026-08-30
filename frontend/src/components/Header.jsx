@@ -140,7 +140,7 @@ export default function Header({ status, provider, onProviderChange }) {
 
         {/* GitHub Link */}
         <a
-          href="https://github.com/aaritmehta15/MeetingMind-"
+          href="https://github.com/aaritmehta15/MeetingMind"
           target="_blank"
           rel="noopener noreferrer"
           style={{

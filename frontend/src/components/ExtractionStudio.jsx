@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, Pause, RotateCcw, CheckCircle2, XCircle, Clock, User, ShieldCheck, 
-  Quote, Loader2, Sparkles, Brain, FileText, Trash2, Copy, Check, 
-  Volume2, Users, Mail, CheckSquare, MessageSquare, Download, ChevronRight,
-  TrendingUp, BarChart2, Eye, Compass, Target
+  Loader2, Sparkles, Brain, FileText, Trash2, Copy, Check, 
+  Users, Mail, CheckSquare, MessageSquare,
+  BarChart2, Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,7 +14,6 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
   const [transcript, setTranscript] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [hoverQuote, setHoverQuote] = useState(null);
   const [highlightedTurnIdx, setHighlightedTurnIdx] = useState(null);
   const [copiedKey, setCopiedKey] = useState(null);
   
@@ -32,8 +31,6 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
     if (!rawText) return [];
     const lines = rawText.split('\n').filter(l => l.trim().length > 0);
     const turns = [];
-    let currentSpeaker = 'Speaker';
-    let currentText = '';
     let timeIndex = 0;
 
     const ignoreList = ['date', 'duration', 'participants', 'time', 'location', 'attendees', 'subject'];

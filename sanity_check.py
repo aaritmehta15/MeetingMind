@@ -44,7 +44,7 @@ check("rich", lambda: "already using it")
 # ── LLM SDKs ────────────────────────────────────────────────────────────────
 
 check("groq SDK", lambda: __import__("groq") and "importable")
-check("google-generativeai", lambda: __import__("google.generativeai") and "importable")
+check("google-genai SDK", lambda: __import__("google.genai") and "importable")
 
 # ── Embeddings + vector store ────────────────────────────────────────────────
 
@@ -95,10 +95,13 @@ def _check_gemini():
     key = os.getenv("GEMINI_API_KEY", "")
     if not key or key == "your_gemini_key_here":
         return "[yellow]SKIP — GEMINI_API_KEY not set[/yellow]"
-    import google.generativeai as genai
-    genai.configure(api_key=key)
-    model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
-    resp = model.generate_content("Reply with the single word: hello")
+    from google import genai
+    client = genai.Client(api_key=key)
+    model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    resp = client.models.generate_content(
+        model=model,
+        contents="Reply with the single word: hello",
+    )
     return f"response: {resp.text.strip()!r}"
 
 check("Groq API call", _check_groq)

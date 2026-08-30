@@ -79,14 +79,35 @@ def _check_quote(evidence_quote: str, transcript_text: str) -> tuple[bool, str]:
     if not evidence_quote or not evidence_quote.strip():
         return False, "evidence_quote is empty"
 
-    # Direct substring check (case-sensitive, verbatim)
-    if evidence_quote in transcript_text:
+    cleaned_quote = evidence_quote.strip()
+    # Strip leading/trailing quotation marks if LLM wrapped the quote in quotes
+    if (cleaned_quote.startswith('"') and cleaned_quote.endswith('"')) or \
+       (cleaned_quote.startswith("'") and cleaned_quote.endswith("'")) or \
+       (cleaned_quote.startswith("“") and cleaned_quote.endswith("”")) or \
+       (cleaned_quote.startswith("‘") and cleaned_quote.endswith("’")):
+        cleaned_quote = cleaned_quote[1:-1].strip()
+
+    # 1. Direct substring check (verbatim)
+    if cleaned_quote in transcript_text:
         return True, ""
 
-    # Normalise whitespace and try again (handles \n vs space in multi-line quotes)
-    normalised_quote = " ".join(evidence_quote.split())
+    # 2. Normalise whitespace
+    normalised_quote = " ".join(cleaned_quote.split())
     normalised_transcript = " ".join(transcript_text.split())
     if normalised_quote in normalised_transcript:
+        return True, ""
+
+    # 3. Normalise smart quotes, em-dashes, and unicode punctuation
+    smart_punct_map = str.maketrans({
+        "“": '"', "”": '"', "‘": "'", "’": "'", "—": "--", "–": "-", "…": "..."
+    })
+    q_mapped = normalised_quote.translate(smart_punct_map)
+    t_mapped = normalised_transcript.translate(smart_punct_map)
+    if q_mapped in t_mapped:
+        return True, ""
+
+    # 4. Case-insensitive substring check
+    if q_mapped.lower() in t_mapped.lower():
         return True, ""
 
     # Failed — provide a helpful diagnostic snippet

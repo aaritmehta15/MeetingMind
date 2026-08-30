@@ -297,10 +297,19 @@ def call_llm_json(
 
 
 def _parse_json(text: str) -> Any:
-    """Parse JSON, stripping markdown code fences if present."""
+    """Parse JSON, robustly handling markdown code fences and extraneous text."""
+    import re
     text = text.strip()
-    if text.startswith("```"):
-        # Strip ```json ... ``` or ``` ... ```
-        lines = text.splitlines()
-        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+    
+    # Check for markdown code fence
+    m = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    if m:
+        text = m.group(1).strip()
+    else:
+        # Fallback: extract substring between first { and last } or first [ and last ]
+        first_brace = text.find("{")
+        last_brace = text.rfind("}")
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            text = text[first_brace:last_brace + 1]
+            
     return json.loads(text)

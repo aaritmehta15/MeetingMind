@@ -23,7 +23,13 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 import sys
+import warnings
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from pathlib import Path
 
 from dotenv import load_dotenv

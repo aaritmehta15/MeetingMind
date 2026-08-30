@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import RagExplorer from './RagExplorer';
 import MeetingAnalytics from './MeetingAnalytics';
 import CorpusStudio from './CorpusStudio';
-import { Search, BarChart2, Layers, Sparkles } from 'lucide-react';
+import AgentChat from './AgentChat';
+import { Search, BarChart2, Layers, Sparkles, Brain } from 'lucide-react';
 
 export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) {
   const [mode, setMode] = useState('analytics'); // Default to Analytics
@@ -16,6 +17,15 @@ export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) 
       badge: 'Instant Analytics',
       color: '#14b8a6',
       desc: 'Sentiment · Speaker Stats · Keywords · Timeline · Citation Health — zero LLM cost'
+    },
+    {
+      id: 'agent',
+      label: 'Autonomous Agent',
+      shortLabel: 'ReAct Agent',
+      icon: Brain,
+      badge: '10 Tools · Chain of Thought',
+      color: '#f59e0b',
+      desc: 'Multi-step autonomous reasoning with tool dispatching & thought traces'
     },
     {
       id: 'rag',
@@ -37,7 +47,7 @@ export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) 
     },
   ];
 
-  const currentModeObj = modes.find(m => m.id === mode);
+  const currentModeObj = modes.find(m => m.id === mode) || modes[0];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -126,6 +136,7 @@ export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) 
       {/* Render the Active Mode View */}
       <div style={{ flex: 1 }}>
         {mode === 'analytics' && <MeetingAnalytics userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
+        {mode === 'agent'     && <AgentChat userMeetings={userMeetings} provider={provider} />}
         {mode === 'rag'       && <RagExplorer userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} />}
         {mode === 'corpus'    && <CorpusStudio userMeetings={userMeetings} fetchUserMeetings={fetchUserMeetings} provider={provider} />}
       </div>

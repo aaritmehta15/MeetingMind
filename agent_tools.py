@@ -104,11 +104,12 @@ def make_get_extraction_tool(transcript_text: str, provider: str) -> Tool:
         else:
             extraction, report = _cache["result"]
 
+        accepted_action_quotes = {item.evidence_quote for item in report.accepted_actions}
         out = {
             "summary": extraction.summary,
             "action_items": [
-                {**a.model_dump(), "accepted": idx < len(report.accepted_actions)}
-                for idx, a in enumerate(extraction.action_items)
+                {**a.model_dump(), "accepted": a.evidence_quote in accepted_action_quotes}
+                for a in extraction.action_items
             ],
             "decisions": [d.model_dump() for d in extraction.decisions],
             "citation_rejection_rate": report.rejection_rate,

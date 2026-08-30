@@ -31,6 +31,12 @@ Usage:
 
 from __future__ import annotations
 
+import os
+os.environ["USE_TF"] = "0"
+os.environ["USE_TORCH"] = "1"
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 import json
 import re
 from dataclasses import dataclass

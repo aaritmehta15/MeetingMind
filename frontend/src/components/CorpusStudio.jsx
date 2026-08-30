@@ -48,8 +48,8 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
 
   // Filtered list of meetings based on search input
   const filteredMeetings = (userMeetings || []).filter(m =>
-    m.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
-    m.id.toLowerCase().includes(searchFilter.toLowerCase())
+    (m.title && m.title.toLowerCase().includes(searchFilter.toLowerCase())) ||
+    String(m.id).includes(searchFilter)
   );
 
   const handleAskCorpus = async () => {

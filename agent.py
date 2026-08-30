@@ -150,3 +150,26 @@ def run_agent_with_steps(
         "steps": steps,
         "latency_ms": round(latency, 2)
     }
+
+
+def run_agent(
+    question: str,
+    transcript_path: str,
+    provider: str = "groq",
+    enabled_tools: list[str] | None = None,
+) -> str:
+    """Convenience wrapper for CLI to load transcript and run the agent."""
+    from pathlib import Path
+    p = Path(transcript_path)
+    if not p.exists():
+        raise FileNotFoundError(f"Transcript file not found: {p}")
+    transcript_text = p.read_text(encoding="utf-8").strip()
+    
+    res = run_agent_with_steps(
+        transcript_text=transcript_text,
+        question=question,
+        provider=provider,
+        enabled_tools=enabled_tools,
+    )
+    return res["answer"]
+

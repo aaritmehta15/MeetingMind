@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
   BarChart2, Users, Smile, Calendar, Hash, ShieldCheck,
-  Loader2, Sparkles, AlertTriangle, ChevronRight, TrendingUp,
-  Clock, MessageSquare, Zap, FileText
+  Loader2, Sparkles, AlertTriangle, ChevronRight,
+  MessageSquare
 } from 'lucide-react';
 
 const TONE_COLORS = {
@@ -397,7 +397,6 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
 
                   {data.sentiment.map((s) => {
                     const tc = TONE_COLORS[s.tone] || TONE_COLORS.Neutral;
-                    const pct = Math.round(((s.compound + 1) / 2) * 100); // map -1..+1 to 0..100
                     return (
                       <div key={s.speaker} style={{ marginBottom: '11px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
