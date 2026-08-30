@@ -48,12 +48,11 @@ This document is a handoff record of everything accomplished, all verified empir
 
 ```
 ========================================================================================================
-Task / Experiment             Status        Exact Blocking Reason & Error
+Task / Experiment             Status        Details & Next Action
 ========================================================================================================
-1. AMI Gold 20-Sample Eval    BLOCKED       Hugging Face edinburghcstr/ami downloaded 42 parquet shards (1.5GB).
-                                            When PyArrow extracted 108k audio records to C:\Users\Admin\.cache,
-                                            it exhausted drive C: -> OSError: [Errno 28] No space left on device.
-                                            (Cache subsequently deleted; 15.27 GB freed on C:).
+1. AMI Gold 20-Sample Eval    PENDING       Requires downloading the AMI benchmark corpus from Hugging Face:
+                                            https://huggingface.co/datasets/edinburghcstr/ami
+                                            Run eval.py to generate scratch/results/eval_results.json.
 
 2. Google Gemini Live Eval    BLOCKED       Google API key returned:
                                             ClientError: 403 PERMISSION_DENIED. 'Your project has been denied access.'
@@ -74,10 +73,9 @@ Task / Experiment             Status        Exact Blocking Reason & Error
 
 ## 3. 🎯 What Needs to Be Done in the Next Session
 
-### Step 1: Run AMI Evaluation Using Drive `D:` Cache
-Drive `D:` has **$462\text{ GB}$ of free space**. Redirect Hugging Face cache to Drive `D:` to allow full parquet extraction:
-```powershell
-$env:HF_HOME = "D:\hf_cache"
+### Step 1: Run AMI Evaluation from Hugging Face
+Download and evaluate the AMI corpus directly from Hugging Face ([`edinburghcstr/ami`](https://huggingface.co/datasets/edinburghcstr/ami)):
+```bash
 python eval.py --n 20 --provider groq --out scratch/results/eval_results.json
 ```
 
