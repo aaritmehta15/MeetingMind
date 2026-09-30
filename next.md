@@ -40,7 +40,7 @@ This document is a handoff record of everything accomplished, all verified empir
 ### 1.3 Git Synchronization
 - Cleaned merge conflicts in `api.py`, `demo_data/README.md`, and `frontend/src/components/AgentChat.jsx`.
 - Successfully pushed commit `361fb52` to remote repository:
-  👉 **`https://github.com/aaritmehta15/MeetingMind.git` (branch: `main`)**
+  👉 **`https://github.com/<your-username>/MeetingMind.git` (branch: `main`)**
 
 ---
 

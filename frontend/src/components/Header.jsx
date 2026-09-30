@@ -138,32 +138,6 @@ export default function Header({ status, provider, onProviderChange }) {
           </button>
         </div>
 
-        {/* GitHub Link */}
-        <a
-          href="https://github.com/aaritmehta15/MeetingMind"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            color: 'var(--text-muted)',
-            textDecoration: 'none',
-            fontSize: '0.73rem',
-            fontWeight: 600,
-            padding: '5px 11px',
-            borderRadius: '8px',
-            border: '1px solid var(--border-subtle)',
-            background: 'rgba(255,255,255,0.04)',
-            transition: 'all 0.18s ease'
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#f1f5f9'; e.currentTarget.style.borderColor = 'var(--border-medium)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-        >
-          <Code2 size={13} />
-          <span>GitHub</span>
-        </a>
-
         {/* Logout Button */}
         <button
           onClick={logout}

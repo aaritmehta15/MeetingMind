@@ -360,7 +360,7 @@ The frontend is divided into specialized workspace tabs:
 
 ```bash
 # Clone repository
-git clone https://github.com/aaritmehta15/MeetingMind.git
+git clone https://github.com/<your-username>/MeetingMind.git
 cd MeetingMind
 
 # Create and activate Python virtual environment
