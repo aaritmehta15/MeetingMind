@@ -74,23 +74,25 @@ class CorpusIndex:
         return idx.num_chunks
 
     def add_transcript_text(self, text: str, source_name: str, meeting_id: str, window_size: int = 5) -> int:
-        from rag_index import HierarchicalRAGIndex
+        from rag_index import _split_into_turns, _build_parent_windows
 
         if not text.strip():
             return 0
 
-        idx = HierarchicalRAGIndex(window_size=window_size)
-        idx.build(text)
+        turns = _split_into_turns(text)
+        if not turns:
+            return 0
+        parents = _build_parent_windows(turns, window_size=window_size)
 
-        for i in range(idx.num_chunks):
+        for i in range(len(turns)):
             self._chunks.append({
-                "text": idx._parents[i],
-                "child": idx._children[i],
+                "text": parents[i],
+                "child": turns[i],
                 "source": source_name,
                 "meeting": meeting_id,
             })
 
-        return idx.num_chunks
+        return len(turns)
 
     def build_index(self) -> None:
         """Build the FAISS index over all added chunks."""

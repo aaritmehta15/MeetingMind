@@ -31,6 +31,9 @@ import time
 from typing import Any, Type, TypeVar
 
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv()
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -53,7 +56,7 @@ def _call_groq(system_prompt: str, user_message: str) -> str:
     from groq import Groq, RateLimitError
 
     client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    model = os.getenv("GROQ_MODEL", "groq/compound-mini")
+    model = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 
     for attempt in range(4):
         try:
@@ -79,7 +82,7 @@ def _call_groq_json(system_prompt: str, user_message: str) -> str:
     from groq import Groq, RateLimitError
 
     client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    model = os.getenv("GROQ_MODEL", "groq/compound-mini")
+    model = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 
     for attempt in range(4):
         try:

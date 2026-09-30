@@ -9,6 +9,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Any
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
@@ -63,6 +64,15 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     # Seed DB
     seed_db()
+    # Pre-warm sentence-transformer embedding model in background so first query is instantaneous
+    import threading
+    def _warmup():
+        try:
+            from rag_index import _get_embedding_model
+            _get_embedding_model()
+        except Exception:
+            pass
+    threading.Thread(target=_warmup, daemon=True).start()
     yield
 
 app = FastAPI(title="MeetingMind Backend", lifespan=lifespan)
@@ -129,7 +139,7 @@ class CorpusAskRequest(BaseModel):
     question: str
     provider: str = "groq"
     k: int = 5
-    selected_meetings: list[int] | None = None
+    selected_meetings: list[Any] | None = None
 
 class AnalyzeRequest(BaseModel):
     transcript: str | None = None
@@ -142,11 +152,11 @@ def get_status():
     return {
         "status": "online",
         "default_provider": os.getenv("LLM_PROVIDER", "groq"),
-        "groq_model": os.getenv("GROQ_MODEL", "groq/compound-mini"),
+        "groq_model": os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b"),
         "gemini_model": os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
         "embedding_model": "sentence-transformers/all-MiniLM-L6-v2 (384-dim)",
         "vector_engine": "FAISS-CPU IndexFlatIP (Cosine Similarity)",
-        "citation_guard": "Verbatim Substring Validation (Zero Hallucination)"
+        "citation_guard": "Verbatim Substring Validation (Citation-Verified)"
     }
 
 
@@ -197,6 +207,17 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 @app.get("/api/meetings")
 def get_user_meetings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     meetings = db.query(Meeting).filter(Meeting.user_id == current_user.id).order_by(Meeting.created_at.desc()).all()
+    if not meetings:
+        for folder in ["demo_data", "examples"]:
+            folder_path = Path(folder)
+            if folder_path.exists():
+                for f in sorted(folder_path.glob("*.txt")):
+                    if not db.query(Meeting).filter(Meeting.user_id == current_user.id, Meeting.title == f.stem).first():
+                        m = Meeting(user_id=current_user.id, title=f.stem, transcript_text=f.read_text(encoding="utf-8"))
+                        db.add(m)
+        db.commit()
+        meetings = db.query(Meeting).filter(Meeting.user_id == current_user.id).order_by(Meeting.created_at.desc()).all()
+
     return [{"id": m.id, "title": m.title, "created_at": m.created_at, "turn_count": len([l for l in m.transcript_text.splitlines() if ":" in l]), "text": m.transcript_text} for m in meetings]
 
 @app.post("/api/meetings")
@@ -376,14 +397,20 @@ def analyze_endpoint(req: AnalyzeRequest, current_user: User = Depends(get_curre
 
     # ── 1. Speaker Parsing ────────────────────────────────────────────────────
     speaker_data = {}
-    ignore_list = {"date", "duration", "participants", "time", "location", "attendees", "subject"}
+    ignore_list = {
+        "date", "duration", "participants", "time", "location", "attendees", "subject",
+        "decision", "decision 1", "decision 2", "decision 3", "decision 4",
+        "action", "action item", "tier 1", "tier 2", "tier 3", "tier 4",
+        "note", "notes", "summary", "agenda", "project", "topic", "status", "version"
+    }
     for line in t.split("\n"):
         line = line.strip()
         m = re.match(r"^([A-Za-z0-9_\-\s]{1,40})\s*:\s*(.+)$", line)
         if not m:
             continue
         speaker = m.group(1).strip()
-        if speaker.lower() in ignore_list:
+        norm_speaker = re.sub(r"^[-*•\s]+", "", speaker).lower()
+        if norm_speaker in ignore_list or norm_speaker.startswith("decision") or norm_speaker.startswith("tier"):
             continue
         text    = m.group(2).strip()
         d = speaker_data.setdefault(speaker, {"turns": 0, "words": 0, "questions": 0})
@@ -452,27 +479,81 @@ def analyze_endpoint(req: AnalyzeRequest, current_user: User = Depends(get_curre
     bigrams  = Counter(zip(filtered, filtered[1:]))
     top_bg   = [{"phrase": f"{a} {b}", "count": c} for (a, b), c in bigrams.most_common(8)]
 
-    # ── 4. Timeline Extraction ────────────────────────────────────────────────
-    patterns = [
-        r"\b(?:next\s+)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b",
-        r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:\s*,?\s*20\d{2})?",
-        r"\bQ[1-4]\s*(?:20\d{2})?",
-        r"\bend\s+of\s+(?:the\s+)?(?:week|month|quarter|year|day)\b",
-        r"\b\d{1,2}/\d{1,2}(?:/\d{2,4})?",
-        r"\b\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)\b",
-        r"\bin\s+(?:one|two|three|a\s+few|two\s+to\s+three)?\s*(?:day|week|month|hour)s?\b",
-        r"\b(?:tomorrow|today|this\s+week|next\s+week|this\s+month|next\s+month)\b",
-        r"\bby\s+EOD\b",
-        r"\bASAP\b",
-    ]
+    # ── 4. Timeline Extraction (Sentence-level, Speaker-aware) ─────────────────
+    full_date_time = re.compile(
+        r'\b(?:(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+)?'
+        r'(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?'
+        r'(?:,?\s*20\d{2})?'
+        r'(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))?\b',
+        re.IGNORECASE
+    )
+    relative_time = re.compile(
+        r'\b(?:by\s+EOD|ASAP|next\s+week|this\s+week|this\s+Friday|next\s+Friday|'
+        r'end\s+of\s+(?:the\s+)?(?:week|month|quarter|year)|'
+        r'in\s+(?:\d+|one|two|three|four|five|a\s+few)\s*(?:days?|weeks?|months?))\b',
+        re.IGNORECASE
+    )
+    weekday_time = re.compile(
+        r'\b(?:(?:next|this|by)\s+)?(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)'
+        r'(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))?\b',
+        re.IGNORECASE
+    )
+
     timeline = []
-    combined_pat = "|".join(patterns)
-    for m3 in re.finditer(combined_pat, t, re.IGNORECASE):
-        mention = m3.group(0).strip()
-        s = max(0, m3.start() - 90)
-        e = min(len(t), m3.end() + 90)
-        ctx = t[s:e].replace("\n", " ").strip()
-        timeline.append({"mention": mention, "context": ctx})
+    seen_timeline = set()
+    raw_lines = [l.strip() for l in t.split("\n") if l.strip()]
+
+    for line in raw_lines:
+        # Filter out transcript header / setup metadata
+        if re.search(r'^(?:Date:|Duration:|Participants:|Note:|Final Year Project -|Sprint \d+)', line, re.IGNORECASE):
+            continue
+        if '|' in line and ('Duration:' in line or 'Participants:' in line):
+            continue
+
+        speaker = None
+        turn_text = line
+        m_spk = re.match(r'^([A-Za-z0-9_\-\s]{1,30}):\s*(.+)$', line)
+        if m_spk:
+            speaker = m_spk.group(1).strip()
+            turn_text = m_spk.group(2).strip()
+
+        # Split into sentences safely without lookbehinds (compatible with Python 3.14)
+        raw_sents = [s.strip() for s in re.findall(r'[^.!?]+(?:[.!?]|$)', turn_text) if s.strip()]
+        sentences = []
+        abbrevs = {"prof.", "dr.", "mr.", "ms.", "mrs.", "vs.", "fig.", "dept.", "e.g.", "i.e."}
+        for s in raw_sents:
+            if sentences and any(sentences[-1].lower().endswith(ab) for ab in abbrevs):
+                sentences[-1] = sentences[-1] + " " + s
+            else:
+                sentences.append(s)
+        for sent in sentences:
+            sent_clean = re.sub(r'^[“"\'\s\-•]+', '', sent).strip()
+            if not sent_clean or len(sent_clean) < 5:
+                continue
+
+            matches = list(full_date_time.finditer(sent_clean))
+            if not matches:
+                matches = list(relative_time.finditer(sent_clean))
+            if not matches:
+                matches = list(weekday_time.finditer(sent_clean))
+
+            for m in matches:
+                mention = m.group(0).strip()
+                dedup_key = (mention.lower(), sent_clean[:35].lower())
+                if dedup_key in seen_timeline:
+                    continue
+                seen_timeline.add(dedup_key)
+
+                ctx = f"{speaker}: {sent_clean}" if speaker else sent_clean
+                timeline.append({
+                    "mention": mention,
+                    "speaker": speaker,
+                    "context": ctx
+                })
+                if len(timeline) >= 15:
+                    break
+        if len(timeline) >= 15:
+            break
 
     # ── 5. Citation Health Score ──────────────────────────────────────────────
     # Rough measure: ratio of lines with proper "Speaker: text" format
@@ -518,29 +599,44 @@ def api_corpus_build(req: CorpusBuildRequest, current_user: User = Depends(get_c
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_corpus_cache: dict[str, Any] = {}
+
 @app.post("/api/corpus/ask")
 def api_corpus_ask(req: CorpusAskRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     start_t = time.perf_counter()
     try:
         from corpus import CorpusIndex, corpus_ask
-        corp = CorpusIndex()
         
         # Fetch the selected meetings from DB (or all meetings if not filtered)
         query = db.query(Meeting).filter(Meeting.user_id == current_user.id)
         if req.selected_meetings:
-            query = query.filter(Meeting.id.in_(req.selected_meetings))
+            int_ids = []
+            for item in req.selected_meetings:
+                try:
+                    int_ids.append(int(item))
+                except (ValueError, TypeError):
+                    pass
+            if int_ids:
+                query = query.filter(Meeting.id.in_(int_ids))
         meetings = query.all()
         
         if not meetings:
             raise ValueError("No matching meetings found for corpus search.")
-            
-        for m in meetings:
-            corp.add_transcript_text(m.transcript_text, source_name=f"{m.title}.txt", meeting_id=str(m.id))
-            
-        if not corp._chunks:
-            raise ValueError("No transcript data available to build corpus.")
-            
-        corp.build_index()
+
+        # Cache key based on meeting IDs and lengths to avoid re-embedding
+        cache_key = f"{current_user.id}:" + ",".join(f"{m.id}_{len(m.transcript_text)}" for m in sorted(meetings, key=lambda x: x.id))
+        if cache_key in _corpus_cache:
+            corp = _corpus_cache[cache_key]
+        else:
+            corp = CorpusIndex()
+            for m in meetings:
+                corp.add_transcript_text(m.transcript_text, source_name=f"{m.title}.txt", meeting_id=str(m.id))
+            if not corp._chunks:
+                raise ValueError("No transcript data available to build corpus.")
+            corp.build_index()
+            if len(_corpus_cache) > 10:
+                _corpus_cache.clear()
+            _corpus_cache[cache_key] = corp
 
         answer = corpus_ask(
             req.question,
@@ -552,10 +648,14 @@ def api_corpus_ask(req: CorpusAskRequest, current_user: User = Depends(get_curre
         
         sources = corp.search(req.question, k=req.k, selected_meetings=[str(m.id) for m in meetings])
         
+        meeting_map = {str(m.id): m.title for m in meetings}
         source_out = []
         for s in sources:
+            mid = str(s.get("meeting", ""))
+            title = meeting_map.get(mid, s.get("source", "").replace(".txt", ""))
             source_out.append({
-                "source": s["meeting"],
+                "source": title,
+                "meeting_id": mid,
                 "score": round(s["score"], 4),
                 "excerpt": s["text"]
             })

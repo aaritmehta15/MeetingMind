@@ -1,0 +1,115 @@
+Final Year Project - EV Battery Life Management System Architecture & Cell Characterization Sync
+Date: October 14, 2025 | Duration: 60 mins
+Participants: Aarit (Team Lead & Systems Architecture), Arhaan (ML Degradation & RUL Modeling Lead), Akshat (Thermal Management & Cooling Lead), Krutarth (Hardware Circuit & Cell Balancing Lead), Devanshu (Project Coordinator & Testing Lead)
+
+Aarit: Good afternoon team. Welcome to our formal architecture milestone sync for our Final Year Project on "Intelligent EV Battery Life Management and Adaptive Health Estimation System." Our central engineering objective is to extend lithium-ion battery cycle life in light electric vehicles by at least 40% through real-time State-of-Health monitoring, active capacitive balancing, and proactive thermal derating. Today we have five key areas to settle: our battery pack topology and chemistry, our active cell balancing design versus passive bleed resistors, our liquid cooling architecture and thermal runaway safety limits, our embedded machine learning pipeline for State-of-Charge and Remaining Useful Life forecasting, and our component procurement budget. Krutarth, let's start with your evaluation of cell chemistries and pack packaging.
+
+Krutarth: Thanks Aarit. I evaluated two primary chemistries for our 48-volt light EV platform: Lithium Iron Phosphate (LiFePO4) cylindrical cells and Nickel Manganese Cobalt (NMC 811) cylindrical cells in the 21700 form factor. While LiFePO4 offers higher inherent thermal stability and longer baseline cycle life, its gravimetric energy density is only around 160 watt-hours per kilogram, which would result in a bulky 22.8-kilogram pack for our 1 kilowatt-hour design requirement. In contrast, the LG INR21700-M50T NMC cells deliver 260 watt-hours per kilogram, allowing us to build a compact 13S4P pack weighing just 14.2 kilograms.
+
+Aarit: NMC gives us the power-to-weight ratio we need, but standard NMC chemistry degrades rapidly if operated outside its ideal voltage and temperature windows. What are the exact voltage thresholds for our 13S configuration?
+
+Krutarth: In our 13S4P arrangement, nominal pack voltage is 48.1 volts based on 3.7 volts nominal per cell. The maximum charging cutoff voltage is 54.6 volts, or 4.20 volts per cell, and the absolute minimum discharge cutoff voltage is 39.0 volts, which is 3.00 volts per cell. By capping charging at 4.15 volts per cell instead of 4.20 volts during routine charging cycles, we can immediately reduce cathode mechanical stress and prevent lithium plating, extending cycle life before we even apply active balancing.
+
+Arhaan: That 4.15-volt charge ceiling is a well-established strategy in degradation literature. In our electrochemical degradation models, shaving off that top 50 millivolts prevents early SEI layer growth and preserves active lithium inventory. That alone adds roughly 200 cycles of life, and our machine learning model can dynamically adjust that ceiling as the cells age.
+
+Aarit: That is a great synergistic link between hardware limits and ML control. Krutarth, what about cell balancing? Why are we rejecting traditional passive bleeder balancing?
+
+Krutarth: Standard passive balancing uses switched bleed resistors that burn off excess charge from high-voltage cells as pure heat. In a 13-cell pack, passive balancing dissipates up to 18 watts of localized thermal waste inside the enclosed battery module, which accelerates thermal degradation. Instead, I designed an active capacitive charge-shuttling topology interfaced with the Texas Instruments BQ76952 analog front-end. The active circuit transfers charge from the highest-potential cell to the lowest-potential cell through a flying capacitor matrix with an energetic efficiency of 89%. Over 500 operational cycles, this active balancing recovers up to 14% of otherwise stranded usable capacity without adding thermal stress.
+
+Aarit: What switching frequency and capacitor dielectric did you select for the charge-shuttling circuit, Krutarth?
+
+Krutarth: I chose a 50 kHz switching frequency using low-ESR ceramic X7R dielectric capacitors rated at 100 volts. Electrolytic capacitors were ruled out because their electrolyte dries out at elevated temperatures, whereas X7R ceramic capacitors maintain low impedance and high stability up to 105°C.
+
+Aarit: What about galvanic isolation between the low-voltage microcontroller logic and the 54.6-volt high-voltage pack side?
+
+Krutarth: We are implementing full galvanic isolation using Texas Instruments ISO7741 digital quad-channel isolators rated for 5 kV RMS isolation. The I2C and SPI communication buses between the BQ76952 and our STM32F407 microcontroller will be completely isolated, preventing ground loops and transient voltage spikes from damaging the processing core.
+
+Akshat: That 18-watt reduction in internal heat dissipation makes a massive difference for the cooling subsystem. If passive bleeder resistors were dumping 18 watts of localized heat in the center of the pack, my thermal simulations showed a 7.2°C temperature gradient between inner cells and outer cells. Cell-to-cell thermal imbalance is the number one cause of uneven impedance growth.
+
+Aarit: Akshat, walk us through your transient thermal simulations and the cooling design you have developed to eliminate that thermal gradient.
+
+Akshat: I ran conjugate heat transfer and transient CFD simulations in ANSYS Fluent under three drive cycles: standard WLTP Class 3, aggressive US06 high-acceleration highway driving, and a 2.5C fast-charging profile. Under peak 3C acceleration bursts, heat generation reaches 8.4 watts per individual 21700 cell. With passive air cooling, core cell temperatures rapidly spike past 54°C within 18 minutes, which triggers accelerated electrolyte oxidation.
+
+Aarit: Air cooling is definitely out of the question for a high-performance EV pack. What is your active cooling specification?
+
+Akshat: I designed a dual-pass aluminum cold-plate with serpentine micro-channels positioned directly underneath the copper busbar terminal plates. We circulate a 50/50 mixture of ethylene glycol and distilled water using a 12-volt brushless centrifugal coolant pump operating at a flow rate of 2.4 liters per minute. In our simulations, this maintains the entire pack between 26°C and 38°C under continuous 1.5C cruising discharge, and keeps the cell-to-cell thermal gradient below 2.1°C across all 52 cells.
+
+Aarit: What is the fluid hydraulic pressure drop across those serpentine channels? Will our 12V pump handle the head loss?
+
+Akshat: The total hydraulic pressure drop across the cold-plate manifold and connecting silicone hoses is 0.34 bar at 2.4 liters per minute. The centrifugal pump we selected generates a maximum head pressure of 0.65 bar, giving us a safety margin of nearly 1.9x to overcome frictional losses and fluid viscosity increases at lower ambient temperatures.
+
+Arhaan: That 2.1°C gradient is excellent. From a machine learning perspective, uniform temperature distribution ensures that our Equivalent Circuit Model parameters stay stable across all parallel strings, which dramatically improves our State-of-Charge estimation accuracy.
+
+Aarit: Akshat, what are our exact temperature threshold triggers for firmware derating and emergency contactor disconnect?
+
+Akshat: Here is our proposed four-tier thermal protection matrix:
+- Tier 1 (below 40.0°C) — Normal operation, unrestricted 1.0C charging and 3.0C peak discharge.
+- Tier 2 (at 45.0°C) — Soft thermal derating initiates. The firmware throttles allowable discharge current by 30% and commands the cooling pump PWM to 100%.
+- Tier 3 (at 52.0°C) — Hard thermal derating triggers, clamping allowable current by 65% to protect the cathode from phase transformation.
+- Tier 4 (at 60.0°C) — Emergency safety trip. The high-voltage safety contactor disconnects the pack from the vehicle traction inverter within 15 milliseconds to avert thermal runaway.
+
+Devanshu: That 60°C contactor cutoff is critical for our department safety compliance review. Prof. Sharma specifically emphasized that our battery enclosure must have autonomous fail-safe isolation before we are permitted to power the vehicle prototype on the campus test track.
+
+Akshat: For the thermal interface material between the cell bases and the aluminum cold plate, I selected Laird Tflex 700 gap pads rated at 5.0 W/m-K thermal conductivity. We explicitly avoided liquid thermal grease because thermal paste suffers from pump-out and dry-out degradation under repeated thermal cycling, whereas silicone-based gap pads maintain stable mechanical compliance and thermal contact resistance for years.
+
+Devanshu: What about electrical fusing per cell? If an individual 21700 cell experiences an internal dendritic micro-short, how do we prevent it from dragging down the entire parallel block?
+
+Krutarth: I incorporated individual 10-amp fast-acting ceramic surface-mount fuses on every positive cell terminal tab. If any cell fails with an internal short, the fuse blows within 8 milliseconds, safely isolating the faulted cell from the parallel group while allowing the remaining three parallel cells to continue supplying traction current.
+
+Aarit: That is essential redundancy. Now let's turn to Arhaan for the machine learning architecture. Arhaan, how are you structuring the state estimation and degradation models?
+
+Arhaan: Thanks Aarit. I have architected a two-stage hybrid machine learning pipeline designed to balance real-time execution constraints on the microcontroller with deep prognostic accuracy.
+Stage 1 is our real-time State-of-Charge (SoC) observer. Instead of simple Coulomb counting which accumulates integration drift over time, I implemented an online Extended Kalman Filter (EKF) based on a second-order Thevenin Equivalent Circuit Model. The ECM uses two parallel resistor-capacitor networks to capture electrochemical polarization and diffusion dynamics. Running at 100 Hz on the STM32F407, the EKF maintains SoC estimation error below 1.2% across dynamic drive cycles.
+
+Aarit: Arhaan, how does the EKF handle resting periods when the EV is stopped at traffic signals with zero current draw?
+
+Arhaan: When the vehicle is idle and current is zero, Coulomb counting is blind, but our EKF transitions into open-circuit voltage (OCV) correction mode. We implemented a calibrated temperature-compensated OCV-versus-SoC lookup table with hysteresis modeling. The Kalman gain automatically shifts weight from current integration to voltage feedback, continuously correcting any drift accumulated during high-speed driving.
+
+Aarit: And what about long-term capacity fade and parameter drift as the cells age over hundreds of cycles?
+
+Arhaan: That is where Stage 2 comes in: our State-of-Health (SoH) and Remaining Useful Life (RUL) estimation engine. I built a lightweight Temporal Convolutional Network (TCN) augmented with multi-head self-attention. It takes rolling time-series inputs of voltage relaxation curves during rest periods, incremental capacity analysis (ICA) peak shifts—specifically the dQ/dV peak corresponding to phase transition in the NMC cathode—and Coulombic efficiency metrics over 50-cycle windows.
+
+Aarit: What training dataset did you use for the baseline degradation curves, and how did you configure the training hyperparameters?
+
+Arhaan: I trained and cross-validated the network using the NASA Ames Prognostics Center of Excellence (PCoE) battery aging dataset, combined with the Oxford Battery Degradation Dataset. We utilized the AdamW optimizer with a decoupled weight decay of 1e-4 and a cosine annealing learning rate scheduler starting from 1e-3 down to 1e-6. Training converged smoothly in 120 epochs with early stopping on validation loss, achieving a Mean Absolute Error of 1.18% on Remaining Useful Life and forecasting the 80% capacity retirement knee-point within 28 cycles of actual failure.
+
+Krutarth: How will you deploy such a neural network on an embedded microcontroller with limited memory?
+
+Arhaan: That was our primary constraint. I post-quantized the trained PyTorch model into 8-bit integer weights (INT8) using TensorFlow Lite for Microcontrollers. The quantized model binary occupies only 84 kilobytes of Flash memory and 18 kilobytes of RAM. On our STM32F407 Cortex-M4 running at 168 MHz, a single forward inference pass takes 14.5 milliseconds. We only need to run SoH inference once every 60 seconds, so the CPU load from ML is under 0.05%, leaving 99.9% of MCU cycles for safety monitoring and CAN communications.
+
+Aarit: That is outstanding engineering, Arhaan. An 84 KB quantized model with 14.5 millisecond execution time fits our embedded envelope perfectly. Devanshu, let's hear our financial procurement report and project timeline status.
+
+Devanshu: Thanks Aarit. Here is our comprehensive financial audit: our approved Final Year Project grant from the engineering department is ₹40,000. To date, we have executed the following purchases:
+First, 52 LG INR21700-M50T lithium-ion cells: ₹16,800.
+Second, Texas Instruments BQ76952 evaluation module and development board: ₹3,400.
+Third, CNC precision milling for the dual-pass aluminum cold-plate prototype: ₹2,200.
+Fourth, precision thermistors, current shunt resistors, and breakout boards: ₹1,800.
+That brings our cumulative Phase 1 expenditure to ₹24,200. We have ₹15,800 remaining in our project contingency budget, which gives us plenty of runway for PCB fabrication, cooling loop plumbing, and report binding.
+
+Aarit: Are all component vendors confirmed, and what are the delivery lead times?
+
+Devanshu: The cells and TI BQ76952 board have already been delivered to the laboratory. The CNC machined aluminum cold plate will arrive this Friday. I also secured lab access for our high-voltage bench testing in the electrical machines laboratory from 4:00 PM to 8:00 PM on weekdays.
+
+Aarit: What about our upcoming academic deliverables and deadlines?
+
+Devanshu: The engineering faculty panel has set our Mid-Semester Architecture Evaluation for October 30, 2025 at 12:00 PM. We must submit our complete architecture schematic dossier, thermal CFD report, ML validation benchmarks, and component expense invoices to Prof. Sharma. Furthermore, our internal mock defense is scheduled for late November, and the external university viva defense is confirmed for Friday, December 5, 2025.
+
+Aarit: Excellent. Let's record our formal architectural decisions:
+- Decision 1 — We officially adopt the 13S4P LG 21700 NMC pack configuration with the TI BQ76952 analog front-end and active capacitive charge-shuttling balancing at 50 kHz.
+- Decision 2 — We approve the dual-pass aluminum cold-plate design with 50/50 water-glycol coolant and the four-tier thermal derating matrix (45°C soft derate, 52°C hard derate, 60°C contactor trip).
+- Decision 3 — We approve Arhaan's dual-stage EKF and quantized INT8 TCN architecture for embedded real-time SoC and RUL estimation on the STM32F407.
+- Decision 4 — We approve the Phase 1 budget allocation of ₹24,200, maintaining ₹15,800 in contingency reserve.
+
+Aarit: Now let's establish our strict action items and deadlines for the mid-semester submission:
+
+Krutarth: I will finalize the complete 4-layer KiCAD schematic and PCB layout for the active capacitive balancing daughterboard and send Gerber files to the fab house by October 22, 2025 at 5:00 PM.
+
+Akshat: I will complete the ANSYS Fluent pressure drop verification and compile the transient thermal dissipation plots for the cooling plate manifold by October 24, 2025 at 4:00 PM.
+
+Arhaan: I will complete the INT8 quantization of the TCN degradation model, verify the 100 Hz EKF C code on the STM32 Nucleo board, and deliver the benchmark accuracy report by October 26, 2025 at 6:00 PM.
+
+Aarit: I will write the FreeRTOS embedded task scheduler architecture, configure CAN bus 2.0B frame IDs at 500 kbps, and integrate the safety supervisory state machine by October 28, 2025 at 2:00 PM.
+
+Devanshu: I will assemble the Mid-Semester Project Architecture Dossier, compile all component tax invoices, and submit the bound document to Prof. Sharma by October 30, 2025 at 12:00 PM.
+
+Aarit: Thank you everyone for the thorough preparation and high technical rigor. Let's execute these deliverables and reconvene for hardware bench testing next month. Meeting adjourned.

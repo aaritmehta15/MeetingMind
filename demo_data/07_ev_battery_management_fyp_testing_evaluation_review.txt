@@ -1,0 +1,109 @@
+Final Year Project - EV Battery Life Management System Hardware Bench Testing & Defense Readiness
+Date: November 18, 2025 | Duration: 60 mins
+Participants: Aarit (Team Lead & Systems Architecture), Arhaan (ML Degradation & RUL Modeling Lead), Akshat (Thermal Management & Cooling Lead), Krutarth (Hardware Circuit & Cell Balancing Lead), Devanshu (Project Coordinator & Testing Lead)
+
+Aarit: Good afternoon everyone. Welcome to our Sprint 2 hardware bench testing and final defense readiness sync for our Final Year Project on "Intelligent EV Battery Life Management." The university examination board has confirmed our external viva defense for Friday, December 5, 2025 at 10:00 AM. Our department internal dry-run mock defense is locked for Wednesday, November 27 at 3:00 PM in Seminar Hall 2. Today, our objective is to review our complete hardware bench test results, validate our embedded machine learning accuracy on physical hardware, audit our overall project budget, and finalize our thesis submission timeline. Krutarth, let's start with the fabricated 4-layer active balancing daughterboard and your lab measurements.
+
+Krutarth: Thanks Aarit. The 4-layer active capacitive balancing PCB arrived from the fabrication facility last Tuesday, and I completed surface-mount component soldering and microscopic inspection in the power electronics lab. During our initial power-up test on a benchtop power supply, we encountered a high-frequency noise issue: the DC-DC buck converter was coupling roughly 85 millivolts of switching ripple onto our current sensing shunt resistor line. This caused erratic current readings on the ADC during high-load switching transients.
+
+Aarit: How did you mitigate that switching noise, Krutarth?
+
+Krutarth: I modified the front-end analog filtering network by adding a dedicated first-order RC low-pass filter with a cutoff frequency set at 1.2 kHz, along with high-frequency ferrite beads on both differential input lines to the ADS1115 16-bit analog-to-digital converter. After recalibrating the differential zero-offset in firmware, current measurement noise dropped from ±280 milliamps down to ±9 milliamps, achieving a precision of 0.08% of full scale.
+
+Aarit: That is well within our 0.1% design requirement. What busbar interconnect method did we finalize for linking the 21700 cells in the 13S4P matrix?
+
+Krutarth: We utilized 0.2-millimeter thick pure nickel strips with a slotted pattern, bonded using a dual-pulse capacitive discharge spot welder. Ultrasonic spot welding ensured that our contact resistance across every series link remained below 0.75 milliohms. Low contact resistance prevents localized I-squared-R resistive heating at high current discharge.
+
+Aarit: Excellent hardware craft. Now, what were the experimental results for the active capacitive charge-shuttling circuit under an actual cell imbalance?
+
+Krutarth: To rigorously test active balancing, we introduced an intentional 180 millivolt delta between Cell 4 (discharged to 3.72 volts) and Cell 9 (charged to 3.90 volts) in our 13-series pack. When we engaged the TI BQ76952 and our switched-capacitor flying capacitor network running at 50 kHz, the circuit continuously transferred charge from high-voltage cells to low-voltage cells. It equalized all 13 cell voltages to within 7.5 millivolts of each other in exactly 3 hours and 42 minutes.
+
+Aarit: And how did that compare against our passive resistive baseline?
+
+Krutarth: We ran the exact same 180 millivolt imbalance on a traditional passive bleeder resistor board. The passive board required 11 hours and 18 minutes to balance the pack, while generating 14.5 watts of continuous heat waste that heated the adjacent cells by 6.4°C. Our active capacitive balancer completed the task in one-third of the time and operated with an energetic transfer efficiency of 89.2%, producing virtually zero perceptible thermal dissipation.
+
+Akshat: That confirms our CFD modeling predictions. The absence of localized resistor heat allowed our liquid cold-plate to maintain near-isothermal conditions across the entire cell array during balancing.
+
+Aarit: Akshat, walk us through the experimental thermal validation tests you conducted with the DC electronic load.
+
+Akshat: We placed the assembled 13S4P pack inside our 3D-printed ABS structural harness, clamped directly against the dual-pass aluminum cold-plate with 1.5-millimeter thermal conductive gap pads rated at 6.0 W/m-K. We connected the pack to our laboratory programmable DC electronic load and subjected it to a continuous 2.0C fast-charging stress test at 40 amps for 35 minutes. Our 12-volt brushless centrifugal pump circulated the 50/50 ethylene glycol and distilled water mixture at 2.4 liters per minute through the external radiator.
+
+Aarit: Where did you place the temperature thermistors across the pack to capture hot spots?
+
+Akshat: We mounted ten precision NTC 10k thermistors: six placed directly on the negative terminals of the core cells—which experience the highest internal Joule heating—two on the outer perimeter cells, and two monitoring coolant inlet and outlet temperatures.
+
+Aarit: What were the maximum cell core temperatures and the fluid temperature delta?
+
+Akshat: Ambient room temperature in the lab was 22.8°C. Coolant inlet temperature was measured at 24.2°C, and coolant outlet temperature reached 27.3°C, giving an inlet-to-outlet delta of just 3.1°C. The maximum core cell surface temperature peaked and plateaued at 38.4°C, well below our 40.0°C nominal threshold and significantly beneath our 45.0°C soft thermal derating trigger. Even when we injected a momentary 3.0C acceleration discharge pulse of 60 amps for 60 seconds, maximum cell temperature only reached 41.8°C before stabilizing.
+
+Devanshu: What about the safety trip response time when you simulated an emergency cooling pump failure?
+
+Akshat: We conducted a formal fault-injection test by intentionally disconnecting the 12V pump relay and feeding a simulated 60.0°C thermistor signal directly into the STM32 analog input. The microcontroller firmware detected the threshold breach and de-energized the high-voltage safety contactor in exactly 11.2 milliseconds. This comfortably satisfies the 15-millisecond specification outlined in the ISO 26262 ASIL-C automotive functional safety guidelines.
+
+Aarit: That is a critical qualification milestone for our thesis defense. Now let's turn to Arhaan for the embedded machine learning validation results. Arhaan, how did the quantized models perform on the STM32F407 hardware?
+
+Arhaan: Thanks Aarit. I flashed our 8-bit quantized Temporal Convolutional Network model binary onto the STM32F407 alongside your FreeRTOS telemetry tasks. We benchmarked hardware execution time using the internal hardware DWT cycle counter on the ARM Cortex-M4 running at 168 MHz. A full forward inference cycle takes exactly 14.2 milliseconds, requiring only 84 kilobytes of Flash memory and 17.6 kilobytes of SRAM.
+
+Aarit: What accuracy did the online Extended Kalman Filter achieve under dynamic drive cycles?
+
+Arhaan: We fed the EKF with experimental voltage and current telemetry logged during combined US06 and WLTP dynamic drive cycles. The online Extended Kalman Filter achieved a State-of-Charge estimation Root Mean Square Error of only 0.82%, completely eliminating the cumulative integration drift seen in Coulomb counting. Furthermore, our temperature-compensated OCV lookup table successfully corrected state estimates during vehicle idle intervals with zero current.
+
+Aarit: Arhaan, how did you incorporate physical electrochemical constraints into the neural network loss function?
+
+Arhaan: To ensure the model behaves realistically across seasonal temperature extremes from -10°C to +45°C, I integrated an Arrhenius activation energy term into the neural network training loss as a Physics-Informed Neural Network (PINN) penalty. This prevents non-physical capacity recoveries and accurately models elevated internal resistance growth under freezing winter temperatures.
+
+Arhaan: Validated against our 600-cycle accelerated aging test data: our TCN model tracked capacity fade and cathode phase transition shifts with a Mean Absolute Error of only 1.08%. The network successfully forecasted the 80% capacity retirement knee-point within 24 charge-discharge cycles, with a 95% statistical confidence interval of plus or minus 18 cycles. Most importantly, when we simulated pack degradation across a multi-year light EV operational profile, combining our active capacitive balancing with Akshat's proactive thermal derating increased total projected pack cycle life from 1,240 cycles up to 1,835 cycles before reaching the 80% retirement boundary. That represents an overall lifespan extension of 48.0%.
+
+Aarit: A 48.0% battery life extension is an extraordinary achievement for a college Final Year Project. In our CAN bus telemetry stream, I successfully mapped Arhaan's ML outputs into standard CAN 2.0B broadcast frames at 500 kbps: Packet 0x301 broadcasts pack voltage and current, 0x302 transmits individual cell voltages, 0x303 broadcasts the thermal matrix, and 0x304 broadcasts real-time SoC, SoH, and RUL predictions every 100 milliseconds.
+
+Krutarth: Did we verify that the 50 kHz flying capacitor switching didn't induce electromagnetic interference into the CAN differential lines?
+
+Aarit: We ran an oscilloscope FFT spectrum analysis across CAN high and CAN low. By adding a common-mode choke filter on the TJA1051 CAN transceiver and using shielded twisted-pair cabling, high-frequency common-mode noise was attenuated by 38 decibels. CAN frame error counters remained at exactly zero throughout our 35-minute full-load test.
+
+Akshat: On the cooling side, I also verified coolant fluid integrity. After 200 hours of continuous pumping through the aluminum cold plate and radiator, we tested the 50/50 water-glycol mixture: fluid pH remained neutral at 7.8, showing zero galvanic corrosion or aluminum pitting.
+
+Devanshu: Our faculty advisor Prof. Sharma inspected the live CAN bus telemetry on the oscilloscope yesterday and was thoroughly impressed with the real-time frame timing and signal stability. He reminded us to prepare a comprehensive safety demonstration protocol for the external evaluation panel.
+
+Aarit: Devanshu, what is our live demonstration protocol for the examiners?
+
+Devanshu: During our 15-minute live viva demonstration, we will set up the instrumented pack on the lab mobile cart. We will show real-time cell balancing on the LCD telemetry monitor, execute a live 25-amp load step on the DC electronic load, demonstrate Arhaan's real-time EKF State-of-Charge tracking on the PC telemetry dashboard, and trigger our simulated thermistor disconnect to prove the 11.2-millisecond contactor emergency cutoff. I have already secured an Class-D dry powder fire extinguisher and insulated safety gloves for the demonstration table.
+
+Aarit: That is great feedback. Devanshu, let's review our complete project financial reconciliation and viva defense preparations.
+
+Devanshu: Here is our final budget audit:
+Our approved department Final Year Project grant was ₹40,000.
+In Phase 1, we expended ₹24,200 on the cells, TI evaluation module, cold-plate CNC machining, and sensor breakouts.
+In Phase 2, we incurred the following expenditures:
+First, 4-layer active balancing PCB fabrication, stencil, and precision SMD components: ₹4,800.
+Second, 12V brushless centrifugal coolant pump, aluminum mini-radiator, cooling fan, and silicone tubing: ₹3,100.
+Third, laser-cut transparent acrylic safety enclosure, hardware fasteners, and busbar insulation: ₹1,700.
+Total Phase 2 expenditure is ₹9,600.
+Adding Phase 1 and Phase 2 brings our total Final Year Project expenditure to ₹33,800.
+Out of our ₹40,000 grant, we have an unspent surplus of ₹6,200.
+
+Aarit: What is your proposal for utilizing that surplus?
+
+Devanshu: I propose allocating ₹2,400 of this surplus for printing 4 copies of our official hardcover bound thesis with golden embossing, along with two high-resolution 3x2-foot technical demonstration banners for the viva examination hall. That leaves a clean balance of ₹3,800, which we will formally refund to the department research account.
+
+Aarit: That is exceptionally responsible financial governance. What is our presentation preparation schedule?
+
+Devanshu: I have structured our 25-slide master presentation deck covering problem statement, literature review, pack hardware architecture, active balancing theory, ANSYS thermal simulations, embedded ML algorithms, experimental bench results, financial audit, and future commercialization. Our dry-run mock presentation is set for Wednesday, November 27 at 3:00 PM in Seminar Hall 2, and our final external university defense is Friday, December 5 at 10:00 AM.
+
+Aarit: Excellent. Let's record our formal final milestone decisions:
+- Decision 1 — We officially freeze hardware revision 1.2 and firmware version 1.4 for our final university evaluation and viva defense.
+- Decision 2 — We approve the financial reconciliation of ₹33,800 total expenditure and authorize ₹2,400 for hardcover report binding and demonstration banners, refunding the remaining ₹3,800 to the department.
+- Decision 3 — We schedule our internal department dry-run mock defense for Wednesday, November 27, 2025 at 3:00 PM in Seminar Hall 2.
+
+Aarit: Now let's establish our final action items and deadlines:
+
+Krutarth: I will apply conformal silicone moisture-barrier coating across the active balancing PCB, mount the assembly inside the acrylic safety enclosure, and wire the external Anderson connectors by November 21, 2025 at 4:00 PM.
+
+Akshat: I will complete the thermal validation chapter of our final thesis, export all high-resolution ANSYS Fluent temperature distribution figures, and format the fluid dynamics section by November 23, 2025 at 5:00 PM.
+
+Arhaan: I will generate the comparative degradation plots contrasting baseline passive balancing against our active ML system, compile the INT8 inference latency benchmarks, and complete the Machine Learning chapter of the thesis by November 24, 2025 at 6:00 PM.
+
+Aarit: I will finalize the GitHub repository documentation, tag the official v1.0.0 release with complete FreeRTOS firmware source code, and record a 3-minute narrated video demonstration of the hardware bench by November 25, 2025 at 2:00 PM.
+
+Devanshu: I will finalize the 25-slide master defense deck, submit the report PDF to the university plagiarism check portal, collect the 4 hardcover bound thesis copies from the university printing press, and confirm Seminar Hall 2 audiovisual equipment by November 26, 2025 at 1:00 PM.
+
+Aarit: Thank you everyone. We have built an exceptional, rigorous, and verified project that demonstrates genuine innovation in EV battery life management. Let's practice our delivery and finish with top honors. Meeting adjourned.

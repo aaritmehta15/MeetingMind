@@ -85,9 +85,9 @@ def run_extraction(
         MeetingExtraction contains the raw LLM output (including flagged items).
         CitationReport separates accepted vs. rejected items.
     """
-    # Truncate long transcripts to avoid TPM rate limits on free Groq tier.
-    # groq/compound-mini: 6000 chars ≈ ~1500 tokens, safe within 30k TPM/minute.
-    MAX_TRANSCRIPT_CHARS = 6_000
+    # Generous character limit for full meeting transcripts (supports 500+ turns / 100k chars).
+    # Gemini 2.0 Flash has 1M token context; Groq (qwen3.8-27b / llama3.3-70b) has 128k context.
+    MAX_TRANSCRIPT_CHARS = 100_000
     if len(transcript_text) > MAX_TRANSCRIPT_CHARS:
         # Cut at a speaker-turn boundary (newline) for clean context
         cut_point = transcript_text.rfind("\n", 0, MAX_TRANSCRIPT_CHARS)

@@ -3,47 +3,51 @@ import RagExplorer from './RagExplorer';
 import MeetingAnalytics from './MeetingAnalytics';
 import CorpusStudio from './CorpusStudio';
 import AgentChat from './AgentChat';
-import { Search, BarChart2, Layers, Sparkles, Brain } from 'lucide-react';
+import { Search, BarChart2, Layers, Sparkles, Brain, HelpCircle } from 'lucide-react';
 
-export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) {
+export default function QueryHub({ userMeetings, fetchUserMeetings, provider, onOpenGuide }) {
   const [mode, setMode] = useState('analytics'); // Default to Analytics
 
   const modes = [
     {
       id: 'analytics',
-      label: 'Meeting Intelligence',
-      shortLabel: 'Intelligence',
+      label: 'Meeting Analytics',
+      subtitle: 'Instant Stats (0 API Cost)',
+      shortLabel: 'Analytics',
       icon: BarChart2,
-      badge: 'Instant Analytics',
+      badge: 'Local CPU',
       color: '#14b8a6',
-      desc: 'Sentiment · Speaker Stats · Keywords · Timeline · Citation Health — zero LLM cost'
+      desc: 'Sentiment, talk-time shares, keywords & timeline computed instantly on CPU with zero API latency'
     },
     {
       id: 'agent',
       label: 'Autonomous Agent',
-      shortLabel: 'ReAct Agent',
+      subtitle: 'Chat & ReAct Assistant',
+      shortLabel: 'AI Agent',
       icon: Brain,
-      badge: '10 Tools · Chain of Thought',
+      badge: 'Interactive AI',
       color: '#f59e0b',
-      desc: 'Multi-step autonomous reasoning with tool dispatching & thought traces'
+      desc: 'Multi-step autonomous reasoning with 7 specialized tools, execution traces & safe arithmetic calculator'
     },
     {
       id: 'rag',
-      label: 'Hierarchical RAG Explorer',
+      label: 'Hierarchical RAG',
+      subtitle: 'Context & Vector Search',
       shortLabel: 'RAG Explorer',
       icon: Search,
-      badge: 'Child → Parent',
+      badge: 'Evidence Inspector',
       color: '#0ea5e9',
-      desc: 'Visual parent-child context expansion & vector search'
+      desc: 'Sentence-level child matches expanded into 5-turn conversational parent windows'
     },
     {
       id: 'corpus',
-      label: 'Cross-Meeting Corpus',
-      shortLabel: 'Cross-Meeting',
+      label: 'Knowledge Corpus',
+      subtitle: 'Search All Transcripts',
+      shortLabel: 'All Meetings',
       icon: Layers,
-      badge: 'Multi-Document',
+      badge: 'Multi-Meeting',
       color: '#10b981',
-      desc: 'Synthesize insights across all indexed meeting transcripts'
+      desc: 'Cross-transcript multi-document vector synthesis across all meetings in your project'
     },
   ];
 
@@ -64,13 +68,13 @@ export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) 
       }}>
         <div style={{ 
           display: 'inline-flex', 
-          background: 'rgba(10, 15, 28, 0.7)', 
+          background: 'var(--bg-surface)', 
           backdropFilter: 'blur(20px)',
           borderRadius: '16px', 
-          padding: '5px', 
+          padding: '6px', 
           border: '1px solid var(--border-medium)', 
-          gap: '4px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.04)',
+          gap: '6px',
+          boxShadow: 'var(--shadow-card)',
           maxWidth: '100%',
           overflowX: 'auto'
         }}>
@@ -82,15 +86,13 @@ export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) 
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 style={{ 
-                  padding: '9px 18px', 
+                  padding: '8px 16px', 
                   borderRadius: '12px', 
                   border: '1px solid transparent', 
                   cursor: 'pointer', 
                   display: 'flex', 
                   alignItems: 'center', 
-                  gap: '9px', 
-                  fontWeight: isActive ? 700 : 500, 
-                  fontSize: '0.85rem', 
+                  gap: '10px', 
                   transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)', 
                   background: isActive ? `linear-gradient(135deg, ${m.color}dd 0%, ${m.color}99 100%)` : 'transparent', 
                   color: isActive ? '#ffffff' : 'var(--text-muted)',
@@ -98,19 +100,46 @@ export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) 
                   whiteSpace: 'nowrap',
                   fontFamily: "'Inter', sans-serif"
                 }}
+                title={`${m.label}: ${m.desc}`}
               >
-                <Icon size={16} color={isActive ? '#ffffff' : m.color} />
-                <span>{m.label}</span>
-                <span style={{
-                  fontSize: '0.68rem',
-                  padding: '2px 7px',
-                  borderRadius: 'var(--radius-full)',
-                  background: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: isActive ? '#ffffff' : 'var(--text-dim)',
-                  fontWeight: 600
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: isActive ? 'rgba(255,255,255,0.2)' : `${m.color}15`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  {m.badge}
-                </span>
+                  <Icon size={16} color={isActive ? '#ffffff' : m.color} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: isActive ? 700 : 600, fontSize: '0.86rem', color: isActive ? '#ffffff' : 'var(--text-main)' }}>
+                      {m.label}
+                    </span>
+                    <span style={{
+                      fontSize: '0.62rem',
+                      padding: '1px 6px',
+                      borderRadius: 'var(--radius-full)',
+                      background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--bg-panel)',
+                      color: isActive ? '#ffffff' : 'var(--text-dim)',
+                      fontWeight: 700,
+                      border: `1px solid ${isActive ? 'rgba(255,255,255,0.3)' : 'var(--border-subtle)'}`
+                    }}>
+                      {m.badge}
+                    </span>
+                  </div>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    color: isActive ? 'rgba(255,255,255,0.9)' : 'var(--text-dim)',
+                    fontWeight: 500,
+                    marginTop: '1px'
+                  }}>
+                    {m.subtitle}
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -123,13 +152,43 @@ export default function QueryHub({ userMeetings, fetchUserMeetings, provider }) 
           gap: '8px',
           fontSize: '0.78rem',
           color: 'var(--text-muted)',
-          background: 'rgba(255, 255, 255, 0.02)',
+          background: 'var(--bg-surface)',
           border: '1px solid var(--border-subtle)',
-          padding: '4px 14px',
-          borderRadius: 'var(--radius-full)'
+          padding: '5px 14px',
+          borderRadius: 'var(--radius-full)',
+          flexWrap: 'wrap'
         }}>
           <Sparkles size={12} color={currentModeObj.color} />
-          <span>Active Engine: <strong style={{ color: '#f8fafc' }}>{currentModeObj.label}</strong> — {currentModeObj.desc}</span>
+          <span>Active Engine: <strong style={{ color: 'var(--text-main)' }}>{currentModeObj.label}</strong> — {currentModeObj.desc}</span>
+          <button
+            onClick={() => onOpenGuide && onOpenGuide(mode)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 9px',
+              borderRadius: 'var(--radius-full)',
+              border: `1px solid ${currentModeObj.color}50`,
+              background: `${currentModeObj.color}14`,
+              color: currentModeObj.color,
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'all 0.15s ease',
+              marginLeft: '4px'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = `${currentModeObj.color}28`;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = `${currentModeObj.color}14`;
+            }}
+            title={`View ${currentModeObj.label} guide & architecture`}
+          >
+            <HelpCircle size={11} color={currentModeObj.color} />
+            <span>Guide</span>
+          </button>
         </div>
       </div>
 

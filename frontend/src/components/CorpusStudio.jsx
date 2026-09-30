@@ -10,6 +10,7 @@ const SAMPLE_QUERIES = [
   'Summarize all client follow-ups across all transcripts',
 ];
 import { useAuth } from '../context/AuthContext';
+import MarkdownAnswer from './MarkdownAnswer';
 
 export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings }) {
   const { authFetch } = useAuth();
@@ -237,7 +238,7 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
         </div>
 
         {/* Meeting Document Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '10px' }}>
           {filteredMeetings.map((m) => {
             const isSelected = selectedMeetings.has(m.id);
             return (
@@ -245,8 +246,8 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
                 key={m.id}
                 onClick={() => toggleMeeting(m.id)}
                 style={{
-                  background: isSelected ? 'rgba(99, 102, 241, 0.09)' : 'rgba(255, 255, 255, 0.02)',
-                  border: `1px solid ${isSelected ? 'rgba(99, 102, 241, 0.45)' : 'var(--border-subtle)'}`,
+                  background: isSelected ? 'var(--teal-bg)' : 'var(--bg-surface)',
+                  border: `1.5px solid ${isSelected ? 'var(--border-active)' : 'var(--border-subtle)'}`,
                   borderRadius: 'var(--radius-md)',
                   padding: '12px 14px',
                   display: 'flex',
@@ -255,18 +256,18 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
                   gap: '10px',
                   cursor: 'pointer',
                   transition: 'all 0.18s ease',
-                  boxShadow: isSelected ? '0 2px 10px rgba(99, 102, 241, 0.15)' : 'none'
+                  boxShadow: isSelected ? '0 2px 12px rgba(20, 184, 166, 0.15)' : 'none'
                 }}
                 className="glass-panel-interactive"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
                   {/* Custom Checkbox */}
                   <div style={{
                     width: '18px',
                     height: '18px',
                     borderRadius: '5px',
-                    border: `1.5px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.25)'}`,
-                    background: isSelected ? '#6366f1' : 'transparent',
+                    border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border-medium)'}`,
+                    background: isSelected ? 'var(--primary)' : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -276,15 +277,15 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
                     {isSelected && <CheckCircle2 size={13} color="#ffffff" />}
                   </div>
 
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{
                       fontSize: '0.84rem',
                       fontWeight: 700,
-                      color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                      color: 'var(--text-main)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
-                    }}>
+                    }} title={m.title}>
                       {m.title}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>
@@ -298,7 +299,7 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
                   <button
                     onClick={(e) => { e.stopPropagation(); setPreviewMeeting(m); }}
                     className="btn btn-secondary btn-xs"
-                    style={{ padding: '4px', color: 'var(--text-dim)' }}
+                    style={{ padding: '4px 6px', color: 'var(--text-muted)' }}
                     title="Preview Transcript"
                   >
                     <Eye size={12} />
@@ -306,7 +307,7 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
                   <button
                     onClick={(e) => { e.stopPropagation(); handleRename(m.id, m.title); }}
                     className="btn btn-secondary btn-xs"
-                    style={{ padding: '4px', color: 'var(--text-dim)' }}
+                    style={{ padding: '4px 6px', color: 'var(--text-muted)' }}
                     title="Rename Meeting"
                   >
                     <Edit2 size={12} />
@@ -314,7 +315,7 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
                     className="btn btn-secondary btn-xs"
-                    style={{ padding: '4px', color: '#fb7185', borderColor: 'transparent' }}
+                    style={{ padding: '4px 6px', color: '#fb7185', borderColor: 'transparent' }}
                     title="Delete Meeting"
                   >
                     <Trash2 size={12} />
@@ -365,7 +366,9 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
           {SAMPLE_QUERIES.map((sq, idx) => (
             <button
               key={idx}
-              onClick={() => setQuestion(sq)}
+              onClick={() => {
+                setQuestion(sq);
+              }}
               className="btn btn-secondary btn-xs"
               style={{ fontSize: '0.72rem' }}
             >
@@ -384,15 +387,13 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
           {/* Synthesized Answer Card */}
           <div className="glass-panel" style={{ padding: '24px', borderLeft: '4px solid #06b6d4' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#67e8f9', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#06b6d4', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Multi-Meeting Synthesized Answer
               </span>
               <span className="badge badge-verified"><CheckCircle2 size={12} /> Source Grounding</span>
             </div>
 
-            <div style={{ fontSize: '0.95rem', lineHeight: 1.7, color: '#f8fafc', whiteSpace: 'pre-wrap' }}>
-              {result.answer}
-            </div>
+            <MarkdownAnswer content={result.answer} />
 
             <div style={{ marginTop: '16px', fontSize: '0.74rem', color: 'var(--text-dim)', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
               <span>⏱ Latency: <strong>{result.latency_ms} ms</strong></span>
@@ -405,7 +406,7 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
           {/* Cited Source Excerpts */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <BookOpen size={14} color="#818cf8" />
+              <BookOpen size={14} color="#06b6d4" />
               <span>Attributed Meeting Excerpts ({result.sources?.length || 0})</span>
             </div>
 
@@ -413,31 +414,96 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
               <p style={{ fontSize: '0.84rem', color: 'var(--text-dim)' }}>No relevant excerpts found in the selected meetings.</p>
             )}
 
-            {result.sources?.map((src, i) => (
-              <div key={i} className="glass-panel" style={{ padding: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
-                    <FileText size={11} /> {src.source}
-                  </span>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)' }}>
-                    Cosine Score: <strong style={{ color: '#67e8f9' }}>{typeof src.score === 'number' ? src.score.toFixed(3) : src.score}</strong>
-                  </span>
-                </div>
-                <div style={{
-                  fontSize: '0.78rem',
-                  fontFamily: 'var(--font-mono)',
-                  color: '#cbd5e1',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-sm)',
-                  lineHeight: 1.5,
-                  maxHeight: '130px',
-                  overflowY: 'auto'
+            {result.sources?.map((src, i) => {
+              // Resolve human-readable meeting title
+              const meetingObj = userMeetings?.find(
+                m => String(m.id) === String(src.source) ||
+                     String(m.id) === String(src.meeting_id) ||
+                     m.title === src.source ||
+                     m.title?.toLowerCase().includes(String(src.source).toLowerCase())
+              );
+              const displayTitle = meetingObj?.title || src.source || `Meeting #${i + 1}`;
+              const scoreNum = typeof src.score === 'number' ? src.score : parseFloat(src.score) || 0;
+
+              return (
+                <div key={i} className="glass-panel" style={{
+                  padding: '16px',
+                  borderLeft: '3px solid #06b6d4',
+                  background: 'var(--bg-surface-elevated)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
                 }}>
-                  "{src.excerpt}"
+                  {/* Excerpt Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                      <span style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
+                        color: '#ffffff',
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {i + 1}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          color: 'var(--text-main)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={displayTitle}
+                      >
+                        {displayTitle}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="badge badge-cyan" style={{ fontSize: '0.7rem' }}>
+                        Cosine: {scoreNum.toFixed(3)}
+                      </span>
+                      {meetingObj && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewMeeting(meetingObj)}
+                          className="btn btn-secondary btn-xs"
+                          style={{ padding: '2px 7px', fontSize: '0.68rem', gap: '3px' }}
+                          title="Preview full transcript"
+                        >
+                          <Eye size={10} /> View
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Excerpt Dialogue Text */}
+                  <div style={{
+                    fontSize: '0.85rem',
+                    fontFamily: 'var(--font-sans)',
+                    color: 'var(--text-main)',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    lineHeight: 1.6,
+                    maxHeight: '160px',
+                    overflowY: 'auto',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    "{src.excerpt}"
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

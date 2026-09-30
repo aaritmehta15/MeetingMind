@@ -124,20 +124,38 @@ def _build_parent_windows(turns: list[str], window_size: int = 5) -> list[str]:
 
 # ── Embedding ─────────────────────────────────────────────────────────────────
 
-_model = None  # Lazy singleton to avoid reloading on every call
+_model = None
+_fallback_vectorizer = None
 
 def _get_embedding_model():
     global _model
+    if _model is False:
+        return None
     if _model is None:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            from sentence_transformers import SentenceTransformer
+            _model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception:
+            _model = False
     return _model
 
 
 def _embed(texts: list[str]) -> np.ndarray:
     """Embed a list of texts. Returns float32 array of shape (n, 384)."""
     model = _get_embedding_model()
-    vecs = model.encode(texts, show_progress_bar=False, convert_to_numpy=True)
+    if model is not None:
+        vecs = model.encode(texts, show_progress_bar=False, convert_to_numpy=True)
+    else:
+        global _fallback_vectorizer
+        from sklearn.feature_extraction.text import TfidfVectorizer
+
+        if _fallback_vectorizer is None:
+            _fallback_vectorizer = TfidfVectorizer(max_features=HierarchicalRAGIndex.EMBEDDING_DIM)
+            vecs = _fallback_vectorizer.fit_transform(texts).toarray()
+        else:
+            vecs = _fallback_vectorizer.transform(texts).toarray()
+        if vecs.shape[1] < HierarchicalRAGIndex.EMBEDDING_DIM:
+            vecs = np.pad(vecs, ((0, 0), (0, HierarchicalRAGIndex.EMBEDDING_DIM - vecs.shape[1])))
     # Normalise for cosine similarity via IndexFlatIP
     norms = np.linalg.norm(vecs, axis=1, keepdims=True)
     norms = np.where(norms == 0, 1, norms)

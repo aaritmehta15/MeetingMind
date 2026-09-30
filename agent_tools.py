@@ -254,6 +254,13 @@ def make_web_search_tool() -> Tool:
     )
 
 
+METADATA_HEADER_KEYS = {
+    "date", "time", "duration", "participants", "attendees", "location",
+    "subject", "topic", "meeting", "agenda", "project", "note", "notes",
+    "title", "context", "summary", "status", "version", "meeting id", "id",
+    "timestamp", "call id", "session"
+}
+
 def make_sentiment_analyzer_tool(transcript_text: str) -> Tool:
     """Sentiment analysis per-speaker using VADER (no API, runs 100% locally)."""
 
@@ -267,7 +274,7 @@ def make_sentiment_analyzer_tool(transcript_text: str) -> Tool:
         target = str(args.get("target", "all")).strip().lower()
         analyzer = SentimentIntensityAnalyzer()
 
-        # Parse speakers and their lines
+        # Parse speakers and their lines (strictly filtering out transcript headers like Date, Participants)
         speakers: dict[str, list[str]] = {}
         for line in transcript_text.split("\n"):
             line = line.strip()
@@ -277,8 +284,9 @@ def make_sentiment_analyzer_tool(transcript_text: str) -> Tool:
                 speaker, _, text = line.partition(":")
                 speaker = speaker.strip()
                 text = text.strip()
-                if text:
-                    speakers.setdefault(speaker, []).append(text)
+                if not text or speaker.lower() in METADATA_HEADER_KEYS:
+                    continue
+                speakers.setdefault(speaker, []).append(text)
 
         if target != "all" and target in {s.lower() for s in speakers}:
             matched = {s: v for s, v in speakers.items() if s.lower() == target}
@@ -286,7 +294,7 @@ def make_sentiment_analyzer_tool(transcript_text: str) -> Tool:
             matched = speakers
 
         if not matched:
-            return "No speaker turns found for analysis."
+            return "No human speaker dialogue turns found for analysis."
 
         report_lines = ["=== SENTIMENT ANALYSIS REPORT ===\n"]
         overall_scores = []
@@ -298,22 +306,19 @@ def make_sentiment_analyzer_tool(transcript_text: str) -> Tool:
             overall_scores.append(compound)
 
             if compound >= 0.05:
-                tone = "POSITIVE"
+                tone = "POSITIVE (collaborative, constructive)"
             elif compound <= -0.05:
-                tone = "NEGATIVE"
+                tone = "NEGATIVE (concerned, urgent, critical)"
             else:
-                tone = "NEUTRAL"
+                tone = "NEUTRAL (factual, objective)"
 
             report_lines.append(
-                f"Speaker: {speaker}\n"
-                f"  Tone: {tone} (compound={compound:+.3f})\n"
-                f"  Breakdown: pos={scores['pos']:.2f} | neu={scores['neu']:.2f} | neg={scores['neg']:.2f}\n"
-                f"  Utterances analysed: {len(utterances)}"
+                f"- **{speaker}**: Tone is {tone} (compound score: {compound:+.2f}) across {len(utterances)} turn(s)."
             )
 
         avg = sum(overall_scores) / len(overall_scores) if overall_scores else 0
         meeting_tone = "POSITIVE" if avg >= 0.05 else ("NEGATIVE" if avg <= -0.05 else "NEUTRAL")
-        report_lines.append(f"\nOVERALL MEETING SENTIMENT: {meeting_tone} (avg compound={avg:+.3f})")
+        report_lines.append(f"\nOVERALL MEETING SENTIMENT: {meeting_tone} (avg compound: {avg:+.2f})")
         return "\n".join(report_lines)
 
     def _simple_sentiment(text: str, args: dict) -> str:
@@ -330,9 +335,9 @@ def make_sentiment_analyzer_tool(transcript_text: str) -> Tool:
     return Tool(
         name="sentiment_analyzer",
         description=(
-            "Analyze the emotional tone and sentiment of the meeting — overall or per speaker. "
+            "Analyze the emotional tone and sentiment of human speakers in the meeting — overall or per speaker. "
             "Runs VADER NLP locally, zero API calls. Returns compound sentiment score (−1 negative → +1 positive), "
-            "tone label (POSITIVE / NEUTRAL / NEGATIVE), and a full per-speaker breakdown. "
+            "tone label (POSITIVE / NEUTRAL / NEGATIVE), and a per-speaker breakdown. "
             "Use when asked: 'Was the meeting tense?', 'How did X feel about Y?', 'What was the meeting mood?'"
         ),
         parameters={
@@ -359,6 +364,8 @@ def make_speaker_stats_tool(transcript_text: str) -> Tool:
             if not m:
                 continue
             speaker = m.group(1).strip()
+            if speaker.lower() in METADATA_HEADER_KEYS:
+                continue
             text = m.group(2).strip()
             word_count = len(text.split())
             question_count = text.count("?")
@@ -373,7 +380,7 @@ def make_speaker_stats_tool(transcript_text: str) -> Tool:
             d["interruptions"] += interruptions
 
         if not speaker_data:
-            return "Could not parse any speaker turns from the transcript."
+            return "Could not parse any human speaker turns from the transcript."
 
         total_words = sum(v["words"] for v in speaker_data.values())
         total_turns = sum(v["turns"] for v in speaker_data.values())
@@ -614,29 +621,19 @@ def make_citation_checker_tool(transcript_text: str) -> Tool:
 def build_tools(
     transcript_text: str,
     idx,
-    provider: str,
+    provider: str = "groq",
 ) -> list[Tool]:
-    """Build the full set of agent tools for a given transcript and RAG index.
+    """Build the full set of fast agent tools for a given transcript and RAG index.
 
-    Args:
-        transcript_text: The raw transcript.
-        idx: A built HierarchicalRAGIndex instance.
-        provider: LLM provider for extraction tools.
-
-    Returns:
-        List of Tool objects ready to be registered with the agent.
+    Keeps the agent lightning fast by focusing on local NLP and hierarchical RAG,
+    eliminating nested recursive LLM extraction calls or external web scraping delays.
     """
     return [
         # ── Core transcript search ─────────────────────────────────────
         make_rag_search_tool(idx),
-        # ── LLM-backed extraction (cached, single call) ────────────────
-        make_get_extraction_tool(transcript_text, provider),
-        make_get_summary_tool(transcript_text, provider),
-        # ── Utility: math ─────────────────────────────────────────────
+        # ── Safe utility: math ─────────────────────────────────────────
         make_calculator_tool(),
-        # ── Real live data ─────────────────────────────────────────────
-        make_web_search_tool(),
-        # ── Real local NLP/analytics — zero API cost ───────────────────
+        # ── Real local NLP/analytics — zero API cost, instant ──────────
         make_sentiment_analyzer_tool(transcript_text),
         make_speaker_stats_tool(transcript_text),
         make_timeline_extractor_tool(transcript_text),

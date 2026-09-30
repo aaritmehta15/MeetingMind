@@ -27,7 +27,7 @@ function StatCard({ icon: Icon, label, value, sub, color = '#14b8a6' }) {
         <Icon size={18} color={color} />
       </div>
       <div>
-        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.1 }}>{value}</div>
         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
         {sub && <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '1px' }}>{sub}</div>}
       </div>
@@ -45,7 +45,7 @@ function SectionHeader({ icon: Icon, title, color, badge }) {
       }}>
         <Icon size={15} color={color} />
       </div>
-      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#f1f5f9' }}>{title}</span>
+      <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-main)' }}>{title}</span>
       {badge && (
         <span style={{
           fontSize: '0.65rem', padding: '2px 8px', borderRadius: 'var(--radius-full)',
@@ -197,7 +197,7 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: selectedMeetingId === m.id ? '#2dd4bf' : '#f1f5f9' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: selectedMeetingId === m.id ? 'var(--primary)' : 'var(--text-main)' }}>
                         {m.title}
                       </div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{m.turn_count} turns</div>
@@ -299,7 +299,7 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
                 </p>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
                   {['VADER Sentiment', 'Speaker Stats', 'TF Keywords', 'Timeline', 'Citation Score'].map(l => (
-                    <span key={l} style={{ fontSize: '0.68rem', padding: '3px 9px', borderRadius: 'var(--radius-full)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>{l}</span>
+                    <span key={l} style={{ fontSize: '0.68rem', padding: '3px 9px', borderRadius: 'var(--radius-full)', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>{l}</span>
                   ))}
                 </div>
               </div>
@@ -400,7 +400,7 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
                     return (
                       <div key={s.speaker} style={{ marginBottom: '11px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.83rem', fontWeight: 600, color: '#f1f5f9' }}>{s.speaker}</span>
+                          <span style={{ fontSize: '0.83rem', fontWeight: 600, color: 'var(--text-main)' }}>{s.speaker}</span>
                           <span style={{
                             fontSize: '0.68rem', padding: '1px 8px', borderRadius: 'var(--radius-full)',
                             fontWeight: 700, background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`
@@ -439,7 +439,7 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
                       const c = colors[i % colors.length];
                       return (
                         <div key={kw.word} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#cbd5e1', minWidth: '90px' }}>{kw.word}</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)', minWidth: '90px' }}>{kw.word}</span>
                           <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
                             <div style={{ height: '100%', width: `${pct}%`, background: c, borderRadius: 'var(--radius-full)', transition: 'width 0.5s ease' }} />
                           </div>
@@ -467,34 +467,46 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
                 </div>
 
                 {/* Timeline */}
+                {/* Timeline */}
                 <div className="glass-panel" style={{ padding: '20px' }}>
-                  <SectionHeader icon={Calendar} title="Extracted Timeline" color="#8b5cf6" badge="Regex Engine" />
+                  <SectionHeader icon={Calendar} title="Extracted Timeline" color="#8b5cf6" badge="Milestone Engine" />
                   {data.timeline.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-dim)' }}>
                       <Calendar size={28} style={{ margin: '0 auto 8px', opacity: 0.2 }} />
                       <p style={{ fontSize: '0.8rem' }}>No explicit date or deadline mentions detected.</p>
                     </div>
                   )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto' }}>
                     {data.timeline.map((t, i) => (
                       <div key={i} style={{ display: 'flex', gap: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                           <div style={{
-                            width: '26px', height: '26px', borderRadius: '50%',
+                            width: '24px', height: '24px', borderRadius: '50%',
                             background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.62rem', fontWeight: 700, color: '#a78bfa'
+                            fontSize: '0.62rem', fontWeight: 700, color: '#8b5cf6'
                           }}>{i + 1}</div>
                           {i < data.timeline.length - 1 && (
                             <div style={{ width: '1px', flex: 1, background: 'var(--border-subtle)', marginTop: '4px', minHeight: '14px' }} />
                           )}
                         </div>
-                        <div style={{ paddingTop: '3px', paddingBottom: i < data.timeline.length - 1 ? '8px' : 0 }}>
-                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#a78bfa', marginBottom: '3px' }}>
-                            "{t.mention}"
+                        <div style={{ paddingTop: '2px', paddingBottom: i < data.timeline.length - 1 ? '8px' : 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                            <span style={{
+                              fontSize: '0.75rem', fontWeight: 800, color: '#8b5cf6',
+                              background: 'rgba(139,92,246,0.1)', padding: '2px 8px',
+                              borderRadius: '4px', border: '1px solid rgba(139,92,246,0.25)'
+                            }}>
+                              {t.mention}
+                            </span>
+                            {t.speaker && (
+                              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-dim)' }}>
+                                by {t.speaker}
+                              </span>
+                            )}
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                            ...{t.context}...
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
+                            {t.context}
                           </div>
                         </div>
                       </div>
@@ -512,7 +524,7 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <ShieldCheck size={18} color={data.citation_health > 80 ? '#10b981' : data.citation_health > 50 ? '#f59e0b' : '#f43f5e'} />
                     <div>
-                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f1f5f9' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)' }}>
                         Transcript Structural Health: {data.citation_health}%
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px' }}>
