@@ -248,35 +248,6 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
     return '';
   };
 
-  // Generate Jira Tickets
-  const generateJiraMarkdown = () => {
-    if (!result) return '';
-    return result.action_items.map((a, i) => `### [TASK-${101 + i}] ${a.description}
-- **Assignee:** ${a.owner || 'Unassigned'}
-- **Due Date:** ${a.deadline || 'TBD'}
-- **Status:** To Do
-- **Grounded Quote:** "${a.evidence_quote}"
-- **Verified Grounding:** 100% Verbatim Substring Match
-`).join('\n---\n\n');
-  };
-
-  // Generate Slack Standup
-  const generateSlackMessage = () => {
-    if (!result) return '';
-    return `*📢 Meeting Summary & Next Steps:*
-
-*📝 Summary:*
->${result.summary}
-
-*🎯 Decisions:*
-${result.decisions.map(d => `• *${d.description}*`).join('\n')}
-
-*⚡ Action Items:*
-${result.action_items.map(a => `• *${a.owner || 'Someone'}* → ${a.description} _(Due: ${a.deadline || 'Soon'})_`).join('\n')}
-
-_Generated with MeetingMind (0% Hallucination Guaranteed)_`;
-  };
-
   return (
     <div style={{ padding: '24px 28px', maxWidth: '1550px', margin: '0 auto' }}>
       
@@ -616,18 +587,6 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                   >
                     <Mail size={12} /> Follow-Up Email
                   </button>
-                  <button
-                    onClick={() => setActionTab('jira')}
-                    className={`btn btn-xs ${actionTab === 'jira' ? 'btn-primary' : 'btn-secondary'}`}
-                  >
-                    <CheckSquare size={12} /> Jira / Linear Tickets
-                  </button>
-                  <button
-                    onClick={() => setActionTab('slack')}
-                    className={`btn btn-xs ${actionTab === 'slack' ? 'btn-primary' : 'btn-secondary'}`}
-                  >
-                    <MessageSquare size={12} /> Slack Standup
-                  </button>
                 </div>
 
                 <div className="badge badge-verified" style={{ fontSize: '0.72rem' }}>
@@ -833,70 +792,6 @@ _Generated with MeetingMind (0% Hallucination Guaranteed)_`;
                     </pre>
                   </div>
 
-                </div>
-              )}
-
-              {/* VIEW 3: JIRA / LINEAR TICKETS */}
-              {actionTab === 'jira' && (
-                <div className="glass-panel" style={{ padding: '24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <CheckSquare size={15} /> Formatted Jira / Linear Tickets
-                    </div>
-                    <button
-                      onClick={() => handleCopy(generateJiraMarkdown(), 'jira_copy')}
-                      className="btn btn-primary btn-xs"
-                    >
-                      {copiedKey === 'jira_copy' ? <Check size={12} /> : <Copy size={12} />}
-                      <span>{copiedKey === 'jira_copy' ? 'Copied Tickets!' : 'Copy All Tasks'}</span>
-                    </button>
-                  </div>
-                  <pre style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.78rem',
-                    lineHeight: 1.6,
-                    color: '#cbd5e1',
-                    whiteSpace: 'pre-wrap',
-                    background: 'rgba(0,0,0,0.35)',
-                    padding: '16px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-subtle)',
-                    maxHeight: '440px',
-                    overflowY: 'auto'
-                  }}>
-                    {generateJiraMarkdown()}
-                  </pre>
-                </div>
-              )}
-
-              {/* VIEW 4: SLACK STANDUP */}
-              {actionTab === 'slack' && (
-                <div className="glass-panel" style={{ padding: '24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <MessageSquare size={15} /> Slack / Teams Standup Broadcast
-                    </div>
-                    <button
-                      onClick={() => handleCopy(generateSlackMessage(), 'slack_copy')}
-                      className="btn btn-primary btn-xs"
-                    >
-                      {copiedKey === 'slack_copy' ? <Check size={12} /> : <Copy size={12} />}
-                      <span>{copiedKey === 'slack_copy' ? 'Copied!' : 'Copy Message'}</span>
-                    </button>
-                  </div>
-                  <pre style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '0.85rem',
-                    lineHeight: 1.6,
-                    color: '#e2e8f0',
-                    whiteSpace: 'pre-wrap',
-                    background: 'rgba(0,0,0,0.35)',
-                    padding: '16px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-subtle)'
-                  }}>
-                    {generateSlackMessage()}
-                  </pre>
                 </div>
               )}
 
