@@ -215,31 +215,46 @@ def _validate_provider(provider: str) -> None:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
+def _is_network_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(k in msg for k in ("11001", "getaddrinfo", "nameresolutionerror", "connecterror", "connection error", "remotedisconnected", "failed to resolve"))
+
 def call_llm(
     provider: str | None,
     system_prompt: str,
     user_message: str,
 ) -> str:
-    """Call an LLM provider. Returns the response text.
-
-    Args:
-        provider: 'groq', 'gemini', or 'ollama'. None → use LLM_PROVIDER env var.
-        system_prompt: The system instruction.
-        user_message: The user turn.
-
-    Returns:
-        Response text as a string.
-
-    Raises:
-        RuntimeError: if the provider is unknown or the API key is missing.
-    """
+    """Call an LLM provider. Returns the response text."""
     p = _resolve_provider(provider)
     _validate_provider(p)
     text_fn, _, _, pip_pkg = _PROVIDERS[p]
+    
     try:
         return text_fn(system_prompt, user_message)
-    except ImportError:
-        raise RuntimeError(f"SDK for '{p}' not installed. Run: pip install {pip_pkg}")
+    except Exception as exc:
+        if _is_network_error(exc):
+            # 1. Brief pause and single retry in case of transient Wi-Fi reconnection
+            time.sleep(1.0)
+            try:
+                return text_fn(system_prompt, user_message)
+            except Exception:
+                pass
+            
+            # 2. Automatic failover to alternate cloud provider if keys exist
+            alt_p = "groq" if p == "gemini" else "gemini"
+            alt_key = os.getenv("GROQ_API_KEY" if alt_p == "groq" else "GEMINI_API_KEY")
+            if alt_key and alt_p in _PROVIDERS:
+                try:
+                    alt_text_fn, _, _, _ = _PROVIDERS[alt_p]
+                    print(f"  [Network Failover] {p} DNS/connection failed; auto-switching to {alt_p}...")
+                    return alt_text_fn(system_prompt, user_message)
+                except Exception:
+                    pass
+            raise RuntimeError(
+                f"Network connection error: Unable to reach {p.upper()} API servers (DNS lookup failed). "
+                "Please verify your internet connection or switch providers in the top bar."
+            ) from exc
+        raise
 
 
 def call_llm_json(
@@ -248,34 +263,38 @@ def call_llm_json(
     user_message: str,
     schema: Type[T],
 ) -> T:
-    """Call an LLM provider in JSON mode and parse the result with Pydantic.
-
-    Uses the provider's native JSON mode (Groq: response_format=json_object,
-    Gemini: response_mime_type=application/json, Ollama: format=json).
-
-    Retries once with a corrective prompt if the first response is not valid JSON.
-
-    Args:
-        provider: 'groq', 'gemini', or 'ollama'.
-        system_prompt: The system instruction (should describe the JSON schema).
-        user_message: The user turn.
-        schema: A Pydantic BaseModel class to validate and parse into.
-
-    Returns:
-        A validated instance of `schema`.
-
-    Raises:
-        RuntimeError: if JSON parsing fails after retry.
-        pydantic.ValidationError: if the JSON doesn't match the schema.
-    """
+    """Call an LLM provider in JSON mode and parse the result with Pydantic."""
     p = _resolve_provider(provider)
     _validate_provider(p)
     _, json_fn, _, pip_pkg = _PROVIDERS[p]
 
     try:
         raw = json_fn(system_prompt, user_message)
-    except ImportError:
-        raise RuntimeError(f"SDK for '{p}' not installed. Run: pip install {pip_pkg}")
+    except Exception as exc:
+        if _is_network_error(exc):
+            time.sleep(1.0)
+            try:
+                raw = json_fn(system_prompt, user_message)
+            except Exception:
+                alt_p = "groq" if p == "gemini" else "gemini"
+                alt_key = os.getenv("GROQ_API_KEY" if alt_p == "groq" else "GEMINI_API_KEY")
+                if alt_key and alt_p in _PROVIDERS:
+                    try:
+                        _, alt_json_fn, _, _ = _PROVIDERS[alt_p]
+                        print(f"  [Network Failover] {p} DNS/connection failed; auto-switching to {alt_p} for JSON...")
+                        raw = alt_json_fn(system_prompt, user_message)
+                    except Exception:
+                        raise RuntimeError(
+                            f"Network connection error: Unable to reach AI servers (DNS lookup failed). "
+                            "Please check your internet connection."
+                        ) from exc
+                else:
+                    raise RuntimeError(
+                        f"Network connection error: Unable to reach {p.upper()} API servers (DNS lookup failed). "
+                        "Please verify your internet connection."
+                    ) from exc
+        else:
+            raise
 
     # First parse attempt
     try:

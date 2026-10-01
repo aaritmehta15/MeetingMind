@@ -49,6 +49,7 @@ export default function AgentChat({ userMeetings, examples, provider }) {
   const [expandedStep, setExpandedStep] = useState(0);
   const [selectedExample, setSelectedExample] = useState(null);
   const [copiedAnswer, setCopiedAnswer] = useState(false);
+  const [error, setError] = useState(null);
 
   const [enabledTools, setEnabledTools] = useState(
     () => new Set(ALL_TOOLS.map(t => t.id))
@@ -76,26 +77,28 @@ export default function AgentChat({ userMeetings, examples, provider }) {
     setTranscript(ex.text || ex.transcript_text || '');
     setSelectedExample(ex.id);
     setResult(null);
+    setError(null);
   };
 
   const handleAsk = async () => {
     const cleanT = transcript.trim();
     const cleanQ = question.trim();
     if (!cleanT) {
-      alert('Please load or paste a meeting transcript first.');
+      setError('Please load or paste a meeting transcript first.');
       return;
     }
     if (!cleanQ) {
-      alert('Please enter a question or instruction for the agent.');
+      setError('Please enter a question or instruction for the agent.');
       return;
     }
     if (enabledTools.size === 0) {
-      alert('Please enable at least one tool.');
+      setError('Please enable at least one tool.');
       return;
     }
 
     setLoading(true);
     setResult(null);
+    setError(null);
     try {
       const res = await authFetch('/api/ask', {
         method: 'POST',
@@ -112,7 +115,7 @@ export default function AgentChat({ userMeetings, examples, provider }) {
       setResult(data);
       if (data.steps?.length > 0) setExpandedStep(0);
     } catch (err) {
-      alert('Agent error: ' + err.message);
+      setError(err.message || 'Agent reasoning encountered an unexpected error.');
     } finally {
       setLoading(false);
     }
@@ -347,8 +350,50 @@ export default function AgentChat({ userMeetings, examples, provider }) {
         {/* ════ RIGHT COLUMN: LIVE INTELLIGENCE & EXECUTION TRACE ════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+          {/* Error State */}
+          {error && !loading && (
+            <div className="glass-panel" style={{
+              minHeight: '400px', padding: '36px 28px', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+              border: '1px solid rgba(239, 68, 68, 0.35)', background: 'rgba(239, 68, 68, 0.04)'
+            }}>
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '16px',
+                background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px'
+              }}>
+                <AlertCircle size={28} color="#ef4444" />
+              </div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>
+                Agent Execution Notice
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '460px', lineHeight: 1.6, marginBottom: '20px' }}>
+                {error.includes('11001') || error.toLowerCase().includes('getaddrinfo') || error.toLowerCase().includes('network')
+                  ? "Network connection issue: The AI provider server could not be reached (DNS resolution failed). Your internet connection may have briefly dropped or reconnected. Please verify your connection and click Retry below."
+                  : error}
+              </p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button
+                  onClick={handleAsk}
+                  className="btn btn-primary"
+                  style={{ padding: '8px 18px', fontSize: '0.82rem', gap: '6px' }}
+                >
+                  <Sparkles size={14} />
+                  <span>Retry Reasoning Loop</span>
+                </button>
+                <button
+                  onClick={() => setError(null)}
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 14px', fontSize: '0.82rem' }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Idle State */}
-          {!loading && !result && (
+          {!loading && !result && !error && (
             <div className="glass-panel" style={{ minHeight: '560px', padding: '40px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
               <div style={{
                 width: '60px', height: '60px', borderRadius: '16px',
