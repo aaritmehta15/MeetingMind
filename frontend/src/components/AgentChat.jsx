@@ -367,9 +367,9 @@ export default function AgentChat({ userMeetings, examples, provider }) {
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>
                 Agent Execution Notice
               </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '460px', lineHeight: 1.6, marginBottom: '20px' }}>
-                {error.includes('11001') || error.toLowerCase().includes('getaddrinfo') || error.toLowerCase().includes('network')
-                  ? "Network connection issue: The AI provider server could not be reached (DNS resolution failed). Your internet connection may have briefly dropped or reconnected. Please verify your connection and click Retry below."
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '480px', lineHeight: 1.6, marginBottom: '20px' }}>
+                {/11001|getaddrinfo|network|ssl|eof|protocol|connection|closed|disconnect|failed to fetch/i.test(error)
+                  ? "Internet connection interrupted: Communication with the AI cloud provider was interrupted mid-request (Wi-Fi or network packet drop / SSL disconnect). Please check your internet connection and click Retry below."
                   : error}
               </p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>

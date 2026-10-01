@@ -217,7 +217,14 @@ def _validate_provider(provider: str) -> None:
 
 def _is_network_error(exc: Exception) -> bool:
     msg = str(exc).lower()
-    return any(k in msg for k in ("11001", "getaddrinfo", "nameresolutionerror", "connecterror", "connection error", "remotedisconnected", "failed to resolve"))
+    network_keywords = (
+        "11001", "getaddrinfo", "nameresolutionerror", "connecterror",
+        "connection error", "remotedisconnected", "failed to resolve",
+        "unexpected_eof", "violation of protocol", "ssl", "eof occurred",
+        "connection reset", "broken pipe", "closed network connection",
+        "timeout", "timed out", "temporary failure"
+    )
+    return any(k in msg for k in network_keywords)
 
 def call_llm(
     provider: str | None,
