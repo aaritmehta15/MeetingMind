@@ -22,9 +22,9 @@ const SAMPLE_QUESTIONS = [
   'Show me speaker participation stats: who spoke the most and who asked the most questions?',
   'Extract all deadlines and create a chronological timeline for this meeting.',
   'What were the top recurring keywords and phrases discussed?',
-  "Verify if the claim 'Edd agreed to finish the budget by Friday' is grounded in the transcript.",
-  'What did Edd commit to do, and by when?',
-  'If the Q3 budget is $50,000 and we spent $12,500, calculate remaining %.',
+  'What key technical decisions and commitments were made in this meeting?',
+  'Verify whether the team agreed on the proposed architecture or deliverables in this transcript.',
+  'If the total project budget is $100,000 and we saved $25,000, calculate the savings percentage.',
 ];
 
 function getToolColor(toolName) {

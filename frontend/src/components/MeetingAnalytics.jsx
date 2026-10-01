@@ -76,6 +76,13 @@ export default function MeetingAnalytics({ userMeetings, fetchUserMeetings }) {
     setError(null);
   };
 
+  // Auto-load first meeting if available and none selected
+  React.useEffect(() => {
+    if (userMeetings && userMeetings.length > 0 && !selectedMeetingId && !transcript) {
+      loadMeeting(userMeetings[0]);
+    }
+  }, [userMeetings]);
+
   const handleAnalyze = async () => {
     if (!transcript.trim()) return;
     setLoading(true);

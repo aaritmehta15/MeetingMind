@@ -3,6 +3,8 @@ import json
 import sys
 from pathlib import Path
 
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 BASE_URL = "http://127.0.0.1:8000"
 
 def test_suite():
@@ -106,7 +108,7 @@ Bob Vance: Understood. I will also write the post-migration documentation for th
             print(f"     Step {i}: Tool: {tool_display} -> {step.get('thought')}")
 
     # 8. Testing on Enterprise Benchmark Dataset (demo_data)
-    print("\n[8/8] Testing Enterprise Benchmark extraction on '01_cloud_architecture_migration_sync'...")
+    print("\n[8/10] Testing Enterprise Benchmark extraction on '01_cloud_architecture_migration_sync'...")
     cloud_meeting = next((m for m in meetings if "cloud" in m["title"]), None)
     if cloud_meeting:
         r = requests.post(f"{BASE_URL}/api/extract", json={"meeting_id": cloud_meeting["id"], "provider": "groq"}, headers=headers)
@@ -116,8 +118,58 @@ Bob Vance: Understood. I will also write the post-migration documentation for th
         print(f"   Summary: {bench_res['summary'][:140]}...")
         print(f"   Extracted {len(bench_res['action_items'])} action items and {len(bench_res['decisions'])} decisions.")
 
+    # 9. Multi-Meeting Knowledge Corpus Synthesis
+    print("\n[9/10] Testing /api/corpus/ask (Multi-Meeting Cross-Corpus Synthesis)...")
+    selected_4 = [m["id"] for m in meetings[:4]]
+    r = requests.post(
+        f"{BASE_URL}/api/corpus/ask",
+        json={
+            "question": "What technical architectures, risks, or commitments were discussed across these meetings?",
+            "selected_meetings": selected_4,
+            "provider": "gemini",
+            "k": 5
+        },
+        headers=headers
+    )
+    assert r.status_code == 200, f"Corpus ask failed: {r.text}"
+    corpus_res = r.json()
+    sources = corpus_res.get("sources", [])
+    distinct_meetings_in_sources = {str(s.get("meeting_id")) for s in sources}
+    print(f"✅ Corpus Synthesis completed in {corpus_res.get('latency_ms')}ms:")
+    print(f"   Selected Meeting IDs: {selected_4}")
+    print(f"   Returned {len(sources)} source excerpts spanning {len(distinct_meetings_in_sources)} distinct meetings:")
+    for s in sources:
+        print(f"     • Meeting [{s.get('meeting_id')}] '{s.get('source')}': Score {s.get('score')}")
+    assert len(distinct_meetings_in_sources) >= 2, f"Expected multi-meeting representation, got {distinct_meetings_in_sources}"
+    print(f"   Answer preview: {corpus_res.get('answer', '')[:200]}...")
+
+    # 10. Global Tasks CRUD
+    print("\n[10/10] Testing /api/tasks (Create, Read, Update, Delete)...")
+    # Create task
+    r = requests.post(f"{BASE_URL}/api/tasks", json={"description": "Test task for audit", "deadline": "2026-10-31"}, headers=headers)
+    assert r.status_code == 200, f"Task create failed: {r.text}"
+    task_id = r.json()["id"]
+    print(f"✅ Created task ID: {task_id}")
+
+    # Read tasks
+    r = requests.get(f"{BASE_URL}/api/tasks", headers=headers)
+    assert r.status_code == 200, f"Task read failed: {r.text}"
+    tasks = r.json()
+    assert any(t["id"] == task_id for t in tasks), "Created task not found in list"
+
+    # Update task (mark done)
+    r = requests.put(f"{BASE_URL}/api/tasks/{task_id}", json={"done": 1}, headers=headers)
+    assert r.status_code == 200, f"Task update failed: {r.text}"
+    assert r.json()["done"] == 1, "Task done status not updated"
+    print(f"✅ Updated task {task_id} status to done=1")
+
+    # Delete task
+    r = requests.delete(f"{BASE_URL}/api/tasks/{task_id}", headers=headers)
+    assert r.status_code == 200, f"Task delete failed: {r.text}"
+    print(f"✅ Deleted task {task_id}")
+
     print("\n" + "=" * 60)
-    print("🎉 ALL END-TO-END TESTS PASSED SUCCESSFULLY! EVERYTHING IS HEALTHY.")
+    print("🎉 ALL 10/10 END-TO-END AUDIT SUITE TESTS PASSED WITH 0 ERRORS!")
     print("=" * 60)
 
 if __name__ == "__main__":

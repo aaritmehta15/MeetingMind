@@ -5,9 +5,10 @@ import {
 } from 'lucide-react';
 
 const SAMPLE_QUERIES = [
-  'What decisions were made about the sales strategy across all meetings?',
-  'What was decided about CI/CD and engineering roadmaps?',
-  'Summarize all client follow-ups across all transcripts',
+  'What technical architectures, infrastructure, and engineering commitments were agreed upon?',
+  'What were the major security, compliance, and SLA decisions discussed across the meetings?',
+  'Compare the EV battery management system architecture and its testing evaluation outcomes.',
+  'Summarize all deadlines, deliverables, and owners assigned across the meetings.',
 ];
 import { useAuth } from '../context/AuthContext';
 import MarkdownAnswer from './MarkdownAnswer';
@@ -26,6 +27,15 @@ export default function CorpusStudio({ userMeetings, provider, fetchUserMeetings
   );
   const [searchFilter, setSearchFilter] = useState('');
   const [previewMeeting, setPreviewMeeting] = useState(null);
+
+  // Auto-select all meetings once loaded
+  const initialLoadRef = React.useRef(false);
+  React.useEffect(() => {
+    if (userMeetings && userMeetings.length > 0 && !initialLoadRef.current) {
+      setSelectedMeetings(new Set(userMeetings.map(m => m.id)));
+      initialLoadRef.current = true;
+    }
+  }, [userMeetings]);
 
   // Toggle single meeting selection
   const toggleMeeting = (id) => {

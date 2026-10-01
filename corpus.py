@@ -109,13 +109,22 @@ class CorpusIndex:
         self._index = faiss.IndexFlatIP(self.EMBEDDING_DIM)
         self._index.add(vecs)
 
-    def search(self, query: str, k: int = 5, selected_meetings: list[str] | None = None) -> list[dict]:
+    def search(
+        self,
+        query: str,
+        k: int = 5,
+        selected_meetings: list[str] | None = None,
+        stratified: bool = True,
+    ) -> list[dict]:
         """Search across meetings for relevant context windows.
 
         Args:
             query: Natural language search query.
             k: Maximum number of results to return.
-            selected_meetings: Optional list of meeting filenames/stems to filter by.
+            selected_meetings: Optional list of meeting filenames/stems/IDs to filter by.
+            stratified: If True and multiple meetings are selected, ensures fair-share
+                        representation from each selected meeting instead of letting
+                        one meeting starve all others.
 
         Returns:
             List of dicts with keys: text, source, meeting, score.
@@ -127,7 +136,6 @@ class CorpusIndex:
         if self._index is None:
             raise RuntimeError("Index not built. Call build_index() first.")
 
-        # If filtering, search a larger candidate pool to ensure we find enough matching chunks
         fetch_k = len(self._chunks) if selected_meetings else min(k * 3, len(self._chunks))
         if fetch_k == 0:
             return []
@@ -135,27 +143,78 @@ class CorpusIndex:
         q_vec = _embed([query])
         scores, indices = self._index.search(q_vec, fetch_k)
 
-        results = []
+        # Normalize selected_meetings set for fast lookup
+        selected_set = None
+        if selected_meetings is not None:
+            selected_set = {str(m).replace('.txt', '').lower() for m in selected_meetings}
+            selected_set.update(str(m).lower() for m in selected_meetings)
+
+        def matches_filter(chunk: dict) -> bool:
+            if selected_set is None:
+                return True
+            cm = str(chunk.get("meeting", "")).lower()
+            cs = str(chunk.get("source", "")).replace(".txt", "").lower()
+            cs_raw = str(chunk.get("source", "")).lower()
+            return cm in selected_set or cs in selected_set or cs_raw in selected_set
+
+        num_selected = len(selected_meetings) if selected_meetings is not None else 0
+        if not stratified or num_selected <= 1:
+            results = []
+            for score, idx in zip(scores[0], indices[0]):
+                if idx < 0:
+                    continue
+                chunk = self._chunks[idx].copy()
+                chunk["score"] = float(score)
+                if not matches_filter(chunk):
+                    continue
+                results.append(chunk)
+                if len(results) >= k:
+                    break
+            return results
+
+        # ── Stratified / Balanced Multi-Meeting Retrieval ─────────────────────
+        by_meeting: dict[str, list[dict]] = {str(sm): [] for sm in selected_meetings}
+
+        def get_chunk_meeting_key(chunk: dict) -> str | None:
+            cm = str(chunk.get("meeting", ""))
+            cs = str(chunk.get("source", "")).replace(".txt", "")
+            for sm in selected_meetings:
+                sm_str = str(sm)
+                sm_clean = sm_str.replace(".txt", "").lower()
+                if (cm.lower() == sm_clean or cs.lower() == sm_clean or 
+                    cm.lower() == sm_str.lower() or cs.lower() == sm_str.lower()):
+                    return sm_str
+            return None
+
         for score, idx in zip(scores[0], indices[0]):
             if idx < 0:
                 continue
             chunk = self._chunks[idx].copy()
             chunk["score"] = float(score)
-            
-            # Apply meeting filter if specified
-            if selected_meetings is not None:
-                meeting_match = (
-                    chunk["meeting"] in selected_meetings or
-                    chunk["source"] in selected_meetings or
-                    any(m.replace('.txt', '') == chunk["meeting"] for m in selected_meetings)
-                )
-                if not meeting_match:
-                    continue
+            m_key = get_chunk_meeting_key(chunk)
+            if m_key is not None and m_key in by_meeting:
+                by_meeting[m_key].append(chunk)
 
-            results.append(chunk)
-            if len(results) >= k:
+        # Target total results: at least k, expanding with number of meetings so each has representation
+        target_total = max(k, min(num_selected * 3, 16))
+        
+        # Fair-share round-robin across all selected meetings
+        selected_results = []
+        max_depth = max((len(chunks) for chunks in by_meeting.values()), default=0)
+        
+        for depth in range(max_depth):
+            for sm in selected_meetings:
+                meeting_chunks = by_meeting.get(str(sm), [])
+                if depth < len(meeting_chunks):
+                    selected_results.append(meeting_chunks[depth])
+                    if len(selected_results) >= target_total:
+                        break
+            if len(selected_results) >= target_total:
                 break
-        return results
+
+        # Sort the final stratified results by similarity score descending
+        selected_results.sort(key=lambda x: x["score"], reverse=True)
+        return selected_results
 
     def save(self, corpus_dir: Path) -> None:
         """Save corpus index to disk."""
@@ -208,21 +267,25 @@ def corpus_ask(
     k: int = 5,
     selected_meetings: list[str] | None = None,
     corp: CorpusIndex | None = None,
+    meeting_titles: dict[str, str] | None = None,
 ) -> str:
     """Ask a question across indexed meetings.
 
-    Retrieves the top-k context windows, then calls the LLM with a
-    synthesis prompt to generate a grounded, cross-meeting answer.
+    Retrieves balanced context windows across selected meetings, then calls
+    the LLM with an explicit cross-meeting synthesis prompt to generate a
+    grounded, comprehensive multi-meeting answer.
 
     Args:
         question: Natural-language question.
         corpus_dir: Directory of the saved corpus.
         provider: LLM provider.
         k: Number of chunks to retrieve.
-        selected_meetings: Optional list of meeting filenames to restrict search to.
+        selected_meetings: Optional list of meeting filenames/IDs to restrict search to.
+        corp: Optional preloaded or in-memory CorpusIndex.
+        meeting_titles: Optional mapping of meeting_id -> readable meeting title.
 
     Returns:
-        Answer string with meeting citations.
+        Answer string synthesizing all selected meetings with citations.
     """
     from llm import call_llm
 
@@ -230,26 +293,50 @@ def corpus_ask(
         corp = CorpusIndex()
         corp.load(corpus_dir)
 
-    results = corp.search(question, k=k, selected_meetings=selected_meetings)
+    num_selected = len(selected_meetings) if selected_meetings else 0
+    effective_k = max(k, min(num_selected * 3, 16)) if num_selected > 1 else k
+
+    results = corp.search(question, k=effective_k, selected_meetings=selected_meetings, stratified=True)
     if not results:
         return "No relevant context found in the selected meetings."
 
-    # Build context block with source labels
+    # Build context block with human-readable meeting titles
     context_parts = []
+    meetings_in_context = set()
     for i, r in enumerate(results, 1):
+        mid = str(r.get("meeting", ""))
+        raw_source = str(r.get("source", "")).replace(".txt", "")
+        title = (meeting_titles or {}).get(mid, raw_source or f"Meeting {mid}")
+        meetings_in_context.add(title)
         context_parts.append(
-            f"[Source: {r['meeting']} | relevance={r['score']:.3f}]\n{r['text']}"
+            f"[Meeting: \"{title}\" (ID: {mid}) | Relevance: {r['score']:.3f}]\n{r['text']}"
         )
     context_block = "\n\n---\n\n".join(context_parts)
 
+    active_titles = []
+    if selected_meetings and meeting_titles:
+        for sm in selected_meetings:
+            t = meeting_titles.get(str(sm))
+            if t and t not in active_titles:
+                active_titles.append(f'"{t}"')
+
+    target_meetings_str = ", ".join(active_titles) if active_titles else ", ".join(f'"{m}"' for m in meetings_in_context)
+
     system_prompt = (
-        "You are a cross-meeting analyst. You answer questions by synthesising "
-        "evidence from multiple meeting transcripts. Always cite which meeting "
-        "(by filename) each piece of evidence comes from. Be concise and factual."
+        "You are an expert cross-meeting intelligence analyst for MeetingMind. "
+        "Your task is to synthesize findings, decisions, and discussions across multiple meeting transcripts.\n\n"
+        "Critical Requirements:\n"
+        "1. BALANCED MULTI-MEETING COVERAGE: You MUST address each of the selected meetings represented in the excerpts. Do NOT focus on only one meeting.\n"
+        "2. STRUCTURED CITATIONS: Organize your response with clear sections or bullet points by meeting name (e.g., '### Meeting: <Title>') or by thematic topics comparing each meeting.\n"
+        "3. EXPLICIT EVIDENCE: Cite specific speakers, metrics, engineering decisions, and commitments mentioned in the excerpts.\n"
+        "4. CROSS-MEETING COMPARISON: If the question asks about progress, status, or decisions across meetings, explicitly contrast differences between them.\n"
+        "5. FACTUAL: Rely strictly on the provided excerpts. Do not hallucinate."
     )
     user_msg = (
         f"Question: {question}\n\n"
-        f"Relevant excerpts from the meeting corpus:\n\n{context_block}"
+        f"Target Meetings: {target_meetings_str}\n\n"
+        f"Relevant excerpts from the selected meetings:\n\n{context_block}\n\n"
+        f"Provide a comprehensive, cross-meeting synthesis answering the question."
     )
 
     return call_llm(provider, system_prompt, user_msg)

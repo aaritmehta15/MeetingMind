@@ -638,17 +638,22 @@ def api_corpus_ask(req: CorpusAskRequest, current_user: User = Depends(get_curre
                 _corpus_cache.clear()
             _corpus_cache[cache_key] = corp
 
+        meeting_map = {str(m.id): m.title for m in meetings}
+        selected_mids = [str(m.id) for m in meetings]
+        num_selected = len(selected_mids)
+        effective_k = max(req.k, min(num_selected * 3, 16)) if num_selected > 1 else req.k
+
         answer = corpus_ask(
             req.question,
             provider=req.provider,
-            k=req.k,
-            selected_meetings=[str(m.id) for m in meetings],
-            corp=corp
+            k=effective_k,
+            selected_meetings=selected_mids,
+            corp=corp,
+            meeting_titles=meeting_map
         )
         
-        sources = corp.search(req.question, k=req.k, selected_meetings=[str(m.id) for m in meetings])
+        sources = corp.search(req.question, k=effective_k, selected_meetings=selected_mids, stratified=True)
         
-        meeting_map = {str(m.id): m.title for m in meetings}
         source_out = []
         for s in sources:
             mid = str(s.get("meeting", ""))
