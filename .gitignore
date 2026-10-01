@@ -57,4 +57,7 @@ app.db
 # Private Presentation & Defense Guides
 MASTER_PRESENTATION_GUIDE.md
 *PRESENTATION*.md
+*.pdf
+research_paper
+full_api_backup*.py
 

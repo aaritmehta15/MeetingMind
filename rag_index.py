@@ -39,11 +39,54 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 import json
 import re
+import math
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-import faiss
+try:
+    import faiss
+    _has_faiss = True
+except Exception:
+    faiss = None
+    _has_faiss = False
+
 import numpy as np
+
+
+class _NumpyIndexFlatIP:
+    """Pure NumPy fallback for FAISS IndexFlatIP (Cosine Similarity)."""
+    def __init__(self, dim: int):
+        self.dim = dim
+        self._vectors: np.ndarray | None = None
+
+    def add(self, vecs: np.ndarray) -> None:
+        v = np.asarray(vecs, dtype=np.float32)
+        if self._vectors is None:
+            self._vectors = v
+        else:
+            self._vectors = np.vstack([self._vectors, v])
+
+    def search(self, q_vec: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
+        if self._vectors is None or len(self._vectors) == 0:
+            return np.zeros((1, 0), dtype=np.float32), np.zeros((1, 0), dtype=np.int64)
+        k_capped = min(k, len(self._vectors))
+        q = np.asarray(q_vec, dtype=np.float32)
+        scores_all = np.dot(q, self._vectors.T)  # shape (1, n)
+        idx_sorted = np.argsort(-scores_all, axis=1)[:, :k_capped]
+        top_scores = np.take_along_axis(scores_all, idx_sorted, axis=1)
+        return top_scores.astype(np.float32), idx_sorted.astype(np.int64)
+
+
+def create_index_flat_ip(dim: int):
+    """Factory creating FAISS IndexFlatIP or NumPy fallback if blocked."""
+    if _has_faiss and faiss is not None:
+        try:
+            return faiss.IndexFlatIP(dim)
+        except Exception:
+            pass
+    return _NumpyIndexFlatIP(dim)
+
 
 
 # ── Data structures ───────────────────────────────────────────────────────────
@@ -140,22 +183,59 @@ def _get_embedding_model():
     return _model
 
 
+class _PurePythonTFIDF:
+    """Zero-dependency pure Python/NumPy TF-IDF vectorizer that needs no C++ DLLs."""
+    def __init__(self, dim: int = 384):
+        self.dim = dim
+        self.vocab: dict[str, int] = {}
+        self.idf: dict[str, float] = {}
+
+    def fit_transform(self, docs: list[str]) -> np.ndarray:
+        doc_tokens = []
+        df = Counter()
+        for doc in docs:
+            tokens = re.findall(r"\b[a-zA-Z0-9_\-]{2,}\b", doc.lower())
+            doc_tokens.append(tokens)
+            df.update(set(tokens))
+        top_words = [w for w, _ in df.most_common(self.dim)]
+        self.vocab = {w: i for i, w in enumerate(top_words)}
+        n_docs = max(len(docs), 1)
+        self.idf = {w: math.log((1 + n_docs) / (1 + df[w])) + 1.0 for w in self.vocab}
+        return self._transform_tokens(doc_tokens)
+
+    def transform(self, docs: list[str]) -> np.ndarray:
+        doc_tokens = [re.findall(r"\b[a-zA-Z0-9_\-]{2,}\b", doc.lower()) for doc in docs]
+        return self._transform_tokens(doc_tokens)
+
+    def _transform_tokens(self, doc_tokens_list: list[list[str]]) -> np.ndarray:
+        mat = np.zeros((len(doc_tokens_list), self.dim), dtype=np.float32)
+        for row, tokens in enumerate(doc_tokens_list):
+            counts = Counter(tokens)
+            for word, count in counts.items():
+                if word in self.vocab:
+                    col = self.vocab[word]
+                    mat[row, col] = (1.0 + math.log(count)) * self.idf[word]
+        return mat
+
+
 def _embed(texts: list[str]) -> np.ndarray:
     """Embed a list of texts. Returns float32 array of shape (n, 384)."""
     model = _get_embedding_model()
+    vecs = None
     if model is not None:
-        vecs = model.encode(texts, show_progress_bar=False, convert_to_numpy=True)
-    else:
-        global _fallback_vectorizer
-        from sklearn.feature_extraction.text import TfidfVectorizer
+        try:
+            vecs = model.encode(texts, show_progress_bar=False, convert_to_numpy=True)
+        except Exception:
+            vecs = None
 
+    if vecs is None:
+        global _fallback_vectorizer
         if _fallback_vectorizer is None:
-            _fallback_vectorizer = TfidfVectorizer(max_features=HierarchicalRAGIndex.EMBEDDING_DIM)
-            vecs = _fallback_vectorizer.fit_transform(texts).toarray()
+            _fallback_vectorizer = _PurePythonTFIDF(HierarchicalRAGIndex.EMBEDDING_DIM)
+            vecs = _fallback_vectorizer.fit_transform(texts)
         else:
-            vecs = _fallback_vectorizer.transform(texts).toarray()
-        if vecs.shape[1] < HierarchicalRAGIndex.EMBEDDING_DIM:
-            vecs = np.pad(vecs, ((0, 0), (0, HierarchicalRAGIndex.EMBEDDING_DIM - vecs.shape[1])))
+            vecs = _fallback_vectorizer.transform(texts)
+
     # Normalise for cosine similarity via IndexFlatIP
     norms = np.linalg.norm(vecs, axis=1, keepdims=True)
     norms = np.where(norms == 0, 1, norms)
@@ -178,7 +258,7 @@ class HierarchicalRAGIndex:
         self.window_size = window_size
         self._children: list[str] = []       # child turn texts
         self._parents: list[str] = []         # parent window texts (one per child)
-        self._index: faiss.IndexFlatIP | None = None
+        self._index = None
 
     def build(self, transcript_text: str) -> None:
         """Build the index from a transcript string.
@@ -196,7 +276,7 @@ class HierarchicalRAGIndex:
         self._parents = parent_windows
 
         embeddings = _embed(turns)
-        self._index = faiss.IndexFlatIP(self.EMBEDDING_DIM)
+        self._index = create_index_flat_ip(self.EMBEDDING_DIM)
         self._index.add(embeddings)
 
     def search(self, query: str, k: int = 3) -> list[RAGResult]:
@@ -246,11 +326,17 @@ class HierarchicalRAGIndex:
         """Serialize the index to disk.
 
         Saves two files:
-          <path>.faiss   — the FAISS binary index
-          <path>.meta.json — child texts, parent windows, config
+          <path>.npy or <path>.faiss — the vector index
+          <path>.meta.json           — child texts, parent windows, config
         """
         p = Path(path)
-        faiss.write_index(self._index, str(p) + ".faiss")
+        if hasattr(self._index, "_vectors"):
+            np.save(str(p) + ".npy", self._index._vectors)
+        elif _has_faiss and faiss is not None:
+            try:
+                faiss.write_index(self._index, str(p) + ".faiss")
+            except Exception:
+                pass
         meta = {
             "window_size": self.window_size,
             "children": self._children,
@@ -263,7 +349,17 @@ class HierarchicalRAGIndex:
     def load(self, path: str) -> None:
         """Load a previously saved index from disk."""
         p = str(path)
-        self._index = faiss.read_index(p + ".faiss")
+        npy_path = Path(p + ".npy")
+        faiss_path = Path(p + ".faiss")
+        if npy_path.exists():
+            vecs = np.load(str(npy_path))
+            self._index = _NumpyIndexFlatIP(self.EMBEDDING_DIM)
+            self._index.add(vecs)
+        elif faiss_path.exists() and _has_faiss and faiss is not None:
+            try:
+                self._index = faiss.read_index(str(faiss_path))
+            except Exception:
+                pass
         meta = json.loads(Path(p + ".meta.json").read_text(encoding="utf-8"))
         self.window_size = meta["window_size"]
         self._children = meta["children"]

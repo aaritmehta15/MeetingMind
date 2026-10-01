@@ -95,10 +95,9 @@ class CorpusIndex:
         return len(turns)
 
     def build_index(self) -> None:
-        """Build the FAISS index over all added chunks."""
-        import faiss
+        """Build the index over all added chunks."""
         import numpy as np
-        from rag_index import _embed
+        from rag_index import _embed, create_index_flat_ip
 
         if not self._chunks:
             raise ValueError("No chunks added. Call add_transcript() first.")
@@ -106,7 +105,7 @@ class CorpusIndex:
         texts = [c["text"] for c in self._chunks]
         vecs = _embed(texts)
 
-        self._index = faiss.IndexFlatIP(self.EMBEDDING_DIM)
+        self._index = create_index_flat_ip(self.EMBEDDING_DIM)
         self._index.add(vecs)
 
     def search(self, query: str, k: int = 5, selected_meetings: list[str] | None = None) -> list[dict]:
@@ -120,7 +119,6 @@ class CorpusIndex:
         Returns:
             List of dicts with keys: text, source, meeting, score.
         """
-        import faiss
         import numpy as np
         from rag_index import _embed
 
@@ -159,19 +157,36 @@ class CorpusIndex:
 
     def save(self, corpus_dir: Path) -> None:
         """Save corpus index to disk."""
-        import faiss
-
         corpus_dir.mkdir(parents=True, exist_ok=True)
-        faiss.write_index(self._index, str(corpus_dir / "corpus.faiss"))
+        if hasattr(self._index, "_vectors"):
+            import numpy as np
+            np.save(str(corpus_dir / "corpus.npy"), self._index._vectors)
+        else:
+            try:
+                import faiss
+                faiss.write_index(self._index, str(corpus_dir / "corpus.faiss"))
+            except Exception:
+                pass
         (corpus_dir / "corpus.meta.json").write_text(
             json.dumps(self._chunks, ensure_ascii=False), encoding="utf-8"
         )
 
     def load(self, corpus_dir: Path) -> None:
         """Load a saved corpus index."""
-        import faiss
-
-        self._index = faiss.read_index(str(corpus_dir / "corpus.faiss"))
+        npy_path = corpus_dir / "corpus.npy"
+        faiss_path = corpus_dir / "corpus.faiss"
+        if npy_path.exists():
+            import numpy as np
+            from rag_index import _NumpyIndexFlatIP
+            vecs = np.load(str(npy_path))
+            self._index = _NumpyIndexFlatIP(self.EMBEDDING_DIM)
+            self._index.add(vecs)
+        elif faiss_path.exists():
+            try:
+                import faiss
+                self._index = faiss.read_index(str(faiss_path))
+            except Exception:
+                pass
         self._chunks = json.loads((corpus_dir / "corpus.meta.json").read_text(encoding="utf-8"))
 
 
