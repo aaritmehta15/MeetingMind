@@ -12,6 +12,13 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
+Attribution Requirement:
+Any person, organization, or entity that redistributes, modifies, incorporates, or
+builds derivative works upon this software, or uses it in academic research, benchmark
+evaluations, or commercial products, MUST provide clear and prominent attribution to
+the original author, Aarit Mehta, and include a link to the original repository
+(https://github.com/aaritmehta15/MeetingMind).
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE

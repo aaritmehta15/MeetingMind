@@ -33,7 +33,8 @@
 9. [Installation & Setup](#-installation--setup)
 10. [Evaluation & Benchmarking](#-evaluation--benchmarking)
 11. [Security, Privacy & Local Execution](#-security-privacy--local-execution)
-12. [License](#-license)
+12. [Citation & Mandatory Attribution](#-citation--mandatory-attribution)
+13. [License](#-license)
 
 ---
 
@@ -488,6 +489,31 @@ Metrics tracked in `eval.py`:
 
 ---
 
-## 📜 License
+## 🎓 Citation & Mandatory Attribution
 
-This project is licensed under the [MIT License](LICENSE). Free for personal, academic, and commercial use.
+If you use MeetingMind in your academic research, conference paper, commercial product, or build derivative works upon this codebase, **you must give explicit credit and cite the author**:
+
+### BibTeX
+```bibtex
+@software{mehta2026meetingmind,
+  author = {Mehta, Aarit},
+  title = {MeetingMind: Enterprise Meeting Intelligence & Verification Engine},
+  year = {2026},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/aaritmehta15/MeetingMind}},
+  note = {Full-stack Generative AI meeting assistant with deterministic verbatim citation grounding}
+}
+```
+
+### APA
+> Mehta, A. (2026). *MeetingMind: Enterprise Meeting Intelligence & Verification Engine*. GitHub. https://github.com/aaritmehta15/MeetingMind
+
+---
+
+## 📜 License & Credit Terms
+
+This project is licensed under the [MIT License](LICENSE) with mandatory author attribution:
+- **Open Access**: Free for personal, academic, and commercial use.
+- **Mandatory Credit**: Any derivative software, product, or publication based on or incorporating this work must preserve the copyright notice and provide clear, prominent attribution to **Aarit Mehta** and the [MeetingMind repository](https://github.com/aaritmehta15/MeetingMind).
+
