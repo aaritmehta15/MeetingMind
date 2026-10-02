@@ -22,25 +22,25 @@ This document is a handoff record of everything accomplished, all verified empir
 ---
 
 ### 1.2 Empirical Research Paper Benchmarks (`scratch/results/`)
-1. **Core Citation Guard on Real Transcripts** ([`scratch/results/section1_extractions.json`](file:///d:/MeetingMind/scratch/results/section1_extractions.json)):
+1. **Core Citation Guard on Real Transcripts** (`scratch/results/section1_extractions.json`):
    - Evaluated on `01_cloud_architecture_migration_sync.txt`, `03_security_incident_postmortem_audit.txt`, and `examples/dunder-mifflin-sales.txt`.
    - Verified **0.0% post-guard hallucination rate** across all accepted tasks and decisions.
-2. **Dual-RAG Architecture Benchmark** ([`scratch/results/section2_rag.json`](file:///d:/MeetingMind/scratch/results/section2_rag.json)):
+2. **Dual-RAG Architecture Benchmark** (`scratch/results/section2_rag.json`):
    - **Single-Meeting Hierarchical RAG**: 30 child chunks, 30 parent windows ($5$-turn width), 384-dim dense vectors, **46.08 KB** FAISS memory footprint, **16.28 ms** build time, **6.81 ms** mean search latency.
    - **Cross-Meeting Corpus RAG**: 5 enterprise meetings, 101 total chunks, **155.14 KB** FAISS memory, **250.98 ms** build time, **6.71 ms** mean search latency.
    - **Child vs. Parent Ablation**: Top-1 cosine similarity scores recorded across 10 distinct queries showing exact contextual disambiguation benefits.
-3. **Scale Limits & Adversarial Citation Suite** ([`scratch/results/section5_scale_adversarial.json`](file:///d:/MeetingMind/scratch/results/section5_scale_adversarial.json)):
+3. **Scale Limits & Adversarial Citation Suite** (`scratch/results/section5_scale_adversarial.json`):
    - Scaled meeting benchmarks: 10-min ($1.5\text{k words}$, $5.73\text{ms}$ latency) $\to$ 2-hr ($18.2\text{k words}$, $6.33\text{ms}$) $\to$ 3-hr ($27.4\text{k words}$, $5.64\text{ms}$) $\to$ 5-hr ($45.6\text{k words}$, $1.34\text{MB}$ FAISS index, $5.91\text{ms}$ latency).
    - Tested 5 adversarial attack vectors (`ADV-01` to `ADV-05`: paraphrased quotes, stitched dialogue spans, transcript typos, cross-meeting hallucinations, and negation/semantic inversion limitation).
-4. **Reproducibility Audit** ([`scratch/results/section6_reproducibility.json`](file:///d:/MeetingMind/scratch/results/section6_reproducibility.json)):
+4. **Reproducibility Audit** (`scratch/results/section6_reproducibility.json`):
    - Complete runtime environment dump (Python 3.12.4 on Windows 11 AMD64), installed package versions, and hardcoded hyperparameter table with exact line references.
 
 ---
 
 ### 1.3 Git Synchronization
 - Cleaned merge conflicts in `api.py`, `demo_data/README.md`, and `frontend/src/components/AgentChat.jsx`.
-- Successfully pushed commit `361fb52` to remote repository:
-  👉 **`https://github.com/<your-username>/MeetingMind.git` (branch: `main`)**
+- Successfully pushed to remote repository:
+  👉 **`https://github.com/aaritmehta15/MeetingMind.git`**
 
 ---
 
@@ -94,9 +94,9 @@ python eval.py --n 20 --provider groq --out scratch/results/eval_results.json
      ```
 
 ### Step 3: Final Paper Assembly
-Use the verified artifacts in [`scratch/results/`](file:///d:/MeetingMind/scratch/results) to draft the paper sections:
-- **Section 1**: Anchor on [`section1_extractions.json`](file:///d:/MeetingMind/scratch/results/section1_extractions.json) and [`section5_scale_adversarial.json`](file:///d:/MeetingMind/scratch/results/section5_scale_adversarial.json).
-- **Section 2**: Anchor on [`section2_rag.json`](file:///d:/MeetingMind/scratch/results/section2_rag.json).
+Use the verified artifacts in `scratch/results/` to draft the paper sections:
+- **Section 1**: Anchor on `section1_extractions.json` and `section5_scale_adversarial.json`.
+- **Section 2**: Anchor on `section2_rag.json`.
 - **Section 3**: Anchor on ReAct agent step traces from `.system_generated/tasks/task-557.log`.
-- **Section 5**: Anchor on scale tests ($10\text{m} \to 5\text{hr}$) in [`section5_scale_adversarial.json`](file:///d:/MeetingMind/scratch/results/section5_scale_adversarial.json).
-- **Section 6**: Anchor on hardware and hyperparameter table in [`section6_reproducibility.json`](file:///d:/MeetingMind/scratch/results/section6_reproducibility.json).
+- **Section 5**: Anchor on scale tests ($10\text{m} \to 5\text{hr}$) in `section5_scale_adversarial.json`.
+- **Section 6**: Anchor on hardware and hyperparameter table in `section6_reproducibility.json`.

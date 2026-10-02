@@ -1,27 +1,30 @@
-# MeetingMind 🧠 — Intelligent Meeting Intelligence & Verification Engine
+# MeetingMind 🧠 — Enterprise Meeting Intelligence & Verification Engine
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![React 19](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
-[![FAISS](https://img.shields.io/badge/FAISS-CPU-green.svg)](https://github.com/facebookresearch/faiss)
+[![Whisper ASR](https://img.shields.io/badge/ASR-Groq%20Whisper%20v3-red.svg)](https://groq.com/)
+[![Vector Engine](https://img.shields.io/badge/Vector-FAISS%20%7C%20NumPy-green.svg)](https://github.com/facebookresearch/faiss)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-e92063.svg)](https://docs.pydantic.dev/)
 [![LLM Support](https://img.shields.io/badge/LLM-Groq%20%7C%20Gemini%20%7C%20Ollama-orange.svg)](https://groq.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**MeetingMind** is an enterprise-grade, full-stack Generative AI meeting assistant and intelligence platform. It converts raw, unstructured meeting transcripts into verified action items, structured decisions, executive summaries, and multi-meeting knowledge bases with a **0% hallucination guarantee** via deterministic verbatim citation grounding.
+**MeetingMind** is a full-stack, enterprise-grade Generative AI meeting assistant and intelligence engine. It transforms raw voice recordings, audio files, and conversational transcripts into verified action items, structured decisions, executive summaries, and searchable multi-meeting knowledge bases with a **0% hallucination guarantee** via deterministic verbatim citation grounding.
 
 ---
 
 ## 📑 Table of Contents
 
-1. [Executive Summary & Value Proposition](#-executive-summary--value-proposition)
+1. [Executive Summary & Key Capabilities](#-executive-summary--key-capabilities)
 2. [High-Level System Architecture](#-high-level-system-architecture)
 3. [Core Technical Subsystems](#-core-technical-subsystems)
-   - [Deterministic Citation Guard (Zero Hallucinations)](#1-deterministic-citation-guard-zero-hallucinations)
-   - [Dual RAG Architecture (Single-Meeting vs Cross-Meeting)](#2-dual-rag-architecture-single-meeting-vs-cross-meeting)
-   - [10-Tool ReAct Autonomous Agent](#3-10-tool-react-autonomous-agent)
-   - [Zero-Cost Local NLP Analytics Engine](#4-zero-cost-local-nlp-analytics-engine)
-   - [Multi-Provider LLM Engine & Structured Output](#5-multi-provider-llm-engine--structured-output)
+   - [1. Audio Recording & Speech Intelligence (Whisper ASR)](#1-audio-recording--speech-intelligence-whisper-asr)
+   - [2. Deterministic Citation Guard (Zero Hallucinations)](#2-deterministic-citation-guard-zero-hallucinations)
+   - [3. Dual RAG Architecture (Single-Meeting vs Cross-Meeting)](#3-dual-rag-architecture-single-meeting-vs-cross-meeting)
+   - [4. Resilient Vector Engine (Dense Neural + Zero-Dependency Fallback)](#4-resilient-vector-engine-dense-neural--zero-dependency-fallback)
+   - [5. 10-Tool ReAct Autonomous Agent](#5-10-tool-react-autonomous-agent)
+   - [6. Zero-Cost Local NLP Analytics Engine](#6-zero-cost-local-nlp-analytics-engine)
+   - [7. Multi-Provider LLM Engine & Structured Output](#7-multi-provider-llm-engine--structured-output)
 4. [Codebase Map & Directory Structure](#-codebase-map--directory-structure)
 5. [Data Models & Schema Reference](#-data-models--schema-reference)
 6. [REST API Specification](#-rest-api-specification)
@@ -29,18 +32,24 @@
 8. [Frontend Workspace Modules](#-frontend-workspace-modules)
 9. [Installation & Setup](#-installation--setup)
 10. [Evaluation & Benchmarking](#-evaluation--benchmarking)
+11. [Security, Privacy & Local Execution](#-security-privacy--local-execution)
+12. [License](#-license)
 
 ---
 
-## 💡 Executive Summary & Value Proposition
+## 💡 Executive Summary & Key Capabilities
 
-Traditional LLM summarization often suffers from subtle hallucinations—inventing commitments, misattributing owners, or fabricating deadlines. MeetingMind solves this with a **deterministic verification loop**:
+Traditional LLM meeting summarizers routinely hallucinate—attributing tasks to the wrong people, inventing phantom commitments, or confusing exploratory remarks with formal consensus. MeetingMind solves this through an end-to-end deterministic verification architecture:
 
-- **Verbatim Citation Grounding**: Every extracted action item and decision must cite an exact evidence quote from the dialogue. The Citation Guard verifies these spans against the source text before presenting them to the user.
-- **Hierarchical Parent-Child RAG**: Retrieves granular single-utterance speaker turns (child chunks) to maximize vector precision, and expands them to 5-turn sliding windows (parent context) for LLM generation.
-- **Multi-Meeting Cross-Corpus Synthesis**: Aggregates archives of past meetings into a persistent multi-document vector index for cross-meeting query synthesis.
-- **Autonomous ReAct Agent Studio**: 10 deterministic and search tools orchestrated via a ReAct loop with step-by-step reasoning transparency.
-- **Zero-Cost Instant Analytics**: Computes speaker diarization, participation share, VADER sentiment, timeline extraction, and term frequencies in $<500\text{ms}$ locally without LLM token costs.
+- **🎙️ Live Audio Recording & File Ingestion**: Record audio directly in-browser (`navigator.mediaDevices`) or upload `.mp3`, `.wav`, `.m4a`, `.webm`, or `.flac` files. Fast transcription via Groq Whisper (`whisper-large-v3-turbo`) with Google Gemini multimodal audio fallback in $<2\text{s}$.
+- **🛡️ Verbatim Citation Grounding (0% Hallucinations)**: Every extracted action item, owner, and decision is required to provide an exact verbatim evidence quote. The Citation Guard algorithm validates that quote against the source dialogue turns before presenting it to the user.
+- **⚡ Dual RAG Architecture**:
+  - *Intra-Meeting Hierarchical RAG*: Matches granular speaker turns (child chunks) to optimize vector search precision, then expands to 5-turn sliding windows (parent context) for comprehensive LLM generation.
+  - *Inter-Meeting Knowledge Corpus*: Aggregates archives of multiple meetings into a unified vector index with source citations.
+- **🛡️ Resilient Crash-Proof Vector Engine**: Combines 384-dimensional dense neural embeddings (`sentence-transformers/all-MiniLM-L6-v2`) with a pure-Python TF-IDF vectorizer and pure NumPy cosine index (`IndexFlatIP` drop-in), eliminating C++ DLL crashes across all environments.
+- **🤖 10-Tool Autonomous ReAct Agent**: Interactive reasoning loop (`Thought ➔ Action ➔ Observation`) with full thought-step visibility, safe mathematical AST calculator, sentiment analysis, speaker stats, and evidence verification.
+- **📊 Zero-Cost Local NLP Analytics**: Computes speaker talk-time share, VADER sentiment intensity, temporal milestone maps, and keyword collocations locally in $<50\text{ms}$ on CPU without consuming LLM API tokens.
+- **✨ Modern Glassmorphism Workspace**: High-aesthetic React 19 SPA with dark/light themes, turn-by-turn synchronized audio/dialogue playback, and one-click deliverable exports (Executive Briefs, Action-Oriented Emails, Jira/Linear markdown tickets).
 
 ---
 
@@ -48,9 +57,21 @@ Traditional LLM summarization often suffers from subtle hallucinations—inventi
 
 ```mermaid
 flowchart TD
-    subgraph UI ["Frontend (React 19 + Vite + Glassmorphism UI)"]
-        ES["Extraction Studio\n(Summary · Tasks · Decisions · Playback · Exporters)"]
-        AC["Autonomous Agent Chat\n(10 Tools · Chain of Thought Trace · Playground)"]
+    subgraph Input_Layer ["Input & Ingestion Layer"]
+        Mic["Live Microphone Recording\n(MediaRecorder API · 250ms chunks)"]
+        AudioFile["Audio File Upload\n(.mp3 · .wav · .m4a · .webm · .flac)"]
+        TextTranscript["Raw Text Transcript\n(Copy-Paste or .txt file upload)"]
+    end
+
+    subgraph ASR_Layer ["Speech-to-Text & Formatting (transcription.py)"]
+        Whisper["Groq Whisper v3 Turbo\n(Ultra-fast ASR < 2s)"]
+        GeminiAudio["Gemini Multimodal Audio\n(Secondary Failover Engine)"]
+        TurnFormatter["Dialogue Turn Formatter\n(Speaker-labeled turn normalization)"]
+    end
+
+    subgraph UI ["Frontend Workspace (React 19 + Vite + Glassmorphism)"]
+        ES["Extraction Studio\n(Summary · Tasks · Decisions · Exporters)"]
+        AC["Autonomous Agent Chat\n(10 Tools · Chain of Thought Trace)"]
         MA["Meeting Analytics\n(VADER Sentiment · Speakers · Bigrams · Timeline)"]
         RE["Hierarchical RAG Explorer\n(Child ➔ Parent Visual Inspector)"]
         CS["Corpus Studio\n(Cross-Meeting Multi-Document Synthesis)"]
@@ -59,24 +80,32 @@ flowchart TD
 
     subgraph API_Layer ["FastAPI Gateway & Security (api.py / auth.py)"]
         JWT["JWT Auth & Passlib BCrypt"]
-        Endpoints["REST API Endpoints"]
+        Endpoints["REST API Endpoints (/api/*)"]
         ORM["SQLAlchemy ORM (SQLite app.db)"]
     end
 
     subgraph Intelligence_Core ["Intelligence & Execution Core"]
-        Extractor["extractor.py\n(Pydantic Extraction Pipeline)"]
+        Extractor["extractor.py\n(Pydantic v2 Extraction Pipeline)"]
         Guard["citation_guard.py\n(Verbatim Substring & Normalized Validator)"]
-        SingleRAG["rag_index.py\n(Hierarchical Parent-Child Vector Index)"]
-        CorpusRAG["corpus.py\n(Cross-Meeting Global Corpus Index)"]
-        ReActAgent["agent.py / agent_tools.py\n(10-Tool ReAct Autonomous Loop)"]
-        LLMDispatch["llm.py / prompts.py\n(Groq · Google Gemini · Ollama Dispatcher)"]
+        SingleRAG["rag_index.py\n(Hierarchical Parent-Child RAG)"]
+        CorpusRAG["corpus.py\n(Cross-Meeting Global Corpus)"]
+        ReActAgent["agent.py / agent_tools.py\n(10-Tool ReAct Loop)"]
+        LLMDispatch["llm.py / prompts.py\n(Groq Qwen · Google Gemini · Ollama)"]
     end
 
-    subgraph Vector_DB ["Vector Storage"]
-        FAISS_Single[(FAISS-CPU Single Index)]
-        FAISS_Corpus[(FAISS-CPU Corpus Index)]
-        SentenceTransformer["sentence-transformers/all-MiniLM-L6-v2\n(384-dimensional dense vectors)"]
+    subgraph Vector_DB ["Vector Search Engine"]
+        FAISS_Single[(FAISS / NumPy Cosine Index)]
+        FAISS_Corpus[(FAISS / NumPy Corpus Index)]
+        Embeddings["Dense Neural Vectors (all-MiniLM-L6-v2)\n+ Pure-Python TF-IDF Fallback"]
     end
+
+    Mic --> Whisper
+    AudioFile --> Whisper
+    Whisper -. Failover .-> GeminiAudio
+    Whisper --> TurnFormatter
+    GeminiAudio --> TurnFormatter
+    TurnFormatter --> Endpoints
+    TextTranscript --> Endpoints
 
     UI <==>|JSON / Bearer Token| Endpoints
     Endpoints --> JWT
@@ -89,10 +118,10 @@ flowchart TD
     Extractor --> LLMDispatch
     Extractor --> Guard
     
-    SingleRAG --> SentenceTransformer
+    SingleRAG --> Embeddings
     SingleRAG --> FAISS_Single
     
-    CorpusRAG --> SentenceTransformer
+    CorpusRAG --> Embeddings
     CorpusRAG --> FAISS_Corpus
     
     ReActAgent --> LLMDispatch
@@ -104,28 +133,39 @@ flowchart TD
 
 ## ⚙️ Core Technical Subsystems
 
-### 1. Deterministic Citation Guard (Zero Hallucinations)
-- **File**: `citation_guard.py`
-- **Core Function**: `validate_citations(transcript_text, extraction)`
-- **Mechanism**:
-  1. For each `ActionItem` and `Decision`, takes `evidence_quote`.
-  2. Runs 4-tier match strategy:
-     - Direct substring search (`quote in transcript`).
-     - Whitespace-normalized match (collapsing repeated whitespace/tabs).
-     - Unicode punctuation normalization (quotes, em-dashes, non-breaking spaces).
-     - Case-insensitive token boundary match.
-  3. Partitions items into `accepted_actions` / `rejected_actions` and `accepted_decisions` / `rejected_decisions`.
-  4. Returns `CitationReport` with overall `rejection_rate` ($0.0 \to 1.0$).
+### 1. Audio Recording & Speech Intelligence (Whisper ASR)
+- **Module**: `transcription.py`, `api.py` (`POST /api/meetings/audio`)
+- **Microphone Streaming**: Uses the HTML5 `MediaRecorder` API in `ExtractionStudio.jsx` to capture live microphone audio, chunked every 250ms into a `.webm` binary blob.
+- **Dual ASR Engine**:
+  1. *Primary*: Groq Whisper (`whisper-large-v3-turbo`) transcribes multi-minute audio files in $<2$ seconds.
+  2. *Secondary*: Google Gemini 2.5 Flash multimodal audio API handles failover if Groq is unconfigured.
+- **Dialogue Turn Formatting**: Automatically segments raw transcribed speech into structured dialogue turns (`Speaker 1: ...`, `Speaker 2: ...`) preserving 100% of spoken words and technical terms.
+- **Database Integration**: Automatically persists transcribed meetings into SQLite with immediate availability across Extraction Studio, RAG Explorer, Meeting Analytics, and the ReAct Agent.
 
 ---
 
-### 2. Dual RAG Architecture (Single-Meeting vs Cross-Meeting)
+### 2. Deterministic Citation Guard (Zero Hallucinations)
+- **Module**: `citation_guard.py`
+- **Core Function**: `validate_citations(transcript_text, extraction)`
+- **Verification Strategy**:
+  1. For every extracted `ActionItem` and `Decision`, the engine extracts the mandatory `evidence_quote`.
+  2. Executes a 4-tier validation cascade:
+     - *Exact Substring Search*: Direct containment check in the raw transcript.
+     - *Whitespace Normalization*: Strips redundant line breaks, spaces, and tab characters.
+     - *Unicode Normalization*: Harmonizes typographic quotes, em-dashes, and special characters.
+     - *Token Boundary Matching*: Evaluates word boundary consistency.
+  3. Partitions items into `accepted_actions` / `rejected_actions` and `accepted_decisions` / `rejected_decisions`.
+  4. Returns a `CitationReport` with item-by-item verifiability audit trails.
 
-MeetingMind employs two complementary RAG engines tailored for different analytical scopes:
+---
+
+### 3. Dual RAG Architecture (Single-Meeting vs Cross-Meeting)
+
+MeetingMind separates intra-meeting precision from cross-meeting knowledge synthesis:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                           DUAL RAG ARCHITECTURE                                │
+│                           DUAL RAG ARCHITECTURE                               │
 ├──────────────────────────────────────┬────────────────────────────────────────┤
 │ 1. Intra-Meeting RAG (rag_index.py)  │ 2. Inter-Meeting Corpus (corpus.py)    │
 ├──────────────────────────────────────┼────────────────────────────────────────┤
@@ -138,19 +178,27 @@ MeetingMind employs two complementary RAG engines tailored for different analyti
 ```
 
 #### A. Single-Meeting Hierarchical Parent-Child RAG (`rag_index.py`)
-- **Child Chunks**: Individual speaker turns (`Speaker: utterance`). High semantic resolution.
-- **Parent Windows**: 5-turn sliding window centered around the child.
-- **Retrieval**: User query matches child vectors in FAISS (`IndexFlatIP`). Matched indices expand to parent windows and deduplicate overlapping turns.
+- **Child Chunks**: Individual speaker turns (`Speaker: utterance`). Preserves high semantic granularity.
+- **Parent Windows**: 5-turn sliding window centered around each child chunk.
+- **Retrieval & Expansion**: Matches query vectors against child turns via inner product / cosine similarity, then expands matches to their parent windows and deduplicates overlapping conversational context before passing to the LLM.
 
 #### B. Cross-Meeting Multi-Document Corpus RAG (`corpus.py`)
-- **Corpus Indexing**: Iterates over saved meetings, builds parent windows tagged with `{meeting_id, source_name}`.
-- **Cross-Meeting Synthesis (`corpus_ask`)**: Retrieves top-$k$ relevant windows across all archived meetings and generates a unified response citing specific meetings by name.
+- **Corpus Indexing**: Iterates through multiple meeting transcripts, indexing context windows tagged with `{meeting_id, source_name}`.
+- **Grounded Cross-Meeting Q&A (`corpus_ask`)**: Retrieves top-$k$ relevant passages across all meetings and synthesizes an answer that explicitly cites which meeting each decision originated from.
 
 ---
 
-### 3. 10-Tool ReAct Autonomous Agent
-- **Files**: `agent.py`, `agent_tools.py`
-- **Loop**: Thought $\to$ Action $\to$ Action Input $\to$ Observation $\to$ Final Answer (Max 10 steps).
+### 4. Resilient Vector Engine (Dense Neural + Zero-Dependency Fallback)
+- **Module**: `rag_index.py`, `corpus.py`
+- **Dense Neural Vectors**: Uses `sentence-transformers/all-MiniLM-L6-v2` generating 384-dimensional dense vectors with L2 normalization.
+- **Zero-Dependency Fallback (`_PurePythonTFIDF`)**: If external C++ libraries or neural models are restricted by OS security policies (e.g. Windows Smart App Control blocking `pyduccfft.pyd`), MeetingMind automatically activates an internal pure-Python vectorizer using standard libraries (`re`, `math.log`, `Counter`, `numpy`).
+- **Drop-in Pure NumPy Index (`_NumpyIndexFlatIP`)**: Provides a drop-in replacement for FAISS `IndexFlatIP` using vectorized `np.dot` and `np.take_along_axis`, guaranteeing 100% uptime with sub-10ms retrieval latency across any operating system.
+
+---
+
+### 5. 10-Tool ReAct Autonomous Agent
+- **Modules**: `agent.py`, `agent_tools.py`
+- **Execution Loop**: Standard ReAct framework (`Thought ➔ Action ➔ Action Input ➔ Observation ➔ Final Answer`) bounded at 10 reasoning steps.
 - **Tool Suite**:
 
 | Tool Name | Engine / Library | Purpose |
@@ -158,35 +206,34 @@ MeetingMind employs two complementary RAG engines tailored for different analyti
 | `rag_search` | `HierarchicalRAGIndex` + FAISS | Semantically retrieves dialogue excerpts with parent context |
 | `get_extraction` | `extractor.py` + `citation_guard.py` | Extracts verified actions, decisions, and citation report |
 | `get_summary` | LLM Dispatcher | Generates an executive 2–3 sentence meeting overview |
-| `calculator` | Safe Python AST evaluator | Evaluates mathematical expressions (budgets, percentages) |
-| `web_search` | `duckduckgo-search` (`ddgs`) | Searches live internet for companies, terms, and context |
+| `calculator` | Safe Python AST evaluator | Evaluates mathematical expressions (budgets, run-rates, percentages) |
+| `web_search` | DuckDuckGo (`ddgs`) | Searches live internet for technical terms, companies, and external facts |
 | `sentiment_analyzer` | `vaderSentiment` | Computes per-speaker and overall compound sentiment scores |
-| `speaker_stats` | Zero-LLM Token Diarizer | Computes talk-time share, word counts, and question metrics |
+| `speaker_stats` | Token Diarizer | Computes talk-time share, word counts, and question metrics |
 | `timeline_extractor` | Date & Deadline Regex NLP | Builds chronological sequence of dates and milestones |
 | `keyword_frequency` | Stopword-filtered TF & Bigrams | Identifies top technical terms and recurring bigrams |
 | `citation_checker` | `citation_guard.py` | Verifies whether a specific claim or quote is grounded in text |
 
 ---
 
-### 4. Zero-Cost Local NLP Analytics Engine
-- **Files**: `api.py` (`/api/analyze`), `agent_tools.py`
-- **Execution Time**: $<500\text{ms}$ on standard CPU.
-- **Components**:
+### 6. Zero-Cost Local NLP Analytics Engine
+- **Module**: `api.py` (`/api/analyze`), `agent_tools.py`
+- **Latency**: $<50\text{ms}$ on CPU without consuming LLM API tokens.
+- **Capabilities**:
   1. **Speaker Diarization**: Computes word counts, utterance counts, talk-time share %, and questions asked per participant.
-  2. **VADER Sentiment**: Classifies participant tone as Positive, Neutral, or Negative with compound scores ($-1.0 \to +1.0$).
-  3. **Keyword Frequency & Bigrams**: Extracts unigrams and 2-word collocations excluding standard English stopwords.
-  4. **Chronological Timeline**: Parses dates, days, deadlines (e.g., "by Friday", "Q3", "end of month") mapped to speakers.
-  5. **Structural Citation Health**: Computes utterance density, turn frequency, and quotation verifiability.
+  2. **VADER Sentiment**: Evaluates participant tone as Positive, Neutral, or Negative with compound scores ($-1.0 \to +1.0$).
+  3. **Keyword Frequency & Bigrams**: Extracts unigrams and 2-word collocations excluding English stopwords.
+  4. **Chronological Timeline**: Parses dates, days, and deadlines (e.g., "by Friday", "Q3", "end of month") mapped to speakers.
 
 ---
 
-### 5. Multi-Provider LLM Engine & Structured Output
-- **Files**: `llm.py`, `prompts.py`
-- **Providers Supported**:
-  - **Groq** (Default: `groq/compound-mini`, `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`)
-  - **Google Gemini** (`gemini-2.0-flash`, `gemini-2.5-flash`, `gemini-1.5-pro` via `google-genai` SDK)
-  - **Ollama** (Local self-hosted models: `llama3`, `mistral`)
-- **JSON Reliability**: Enforces native JSON mode with structured schema prompting, markdown stripping, and automated 1-retry fallback.
+### 7. Multi-Provider LLM Engine & Structured Output
+- **Module**: `llm.py`, `prompts.py`
+- **Supported Providers**:
+  - **Groq** (`qwen/qwen3.8-27b`, `llama-3.3-70b-versatile`, `whisper-large-v3-turbo`)
+  - **Google Gemini** (`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro` via `google-genai` SDK)
+  - **Ollama** (Local self-hosted models: `llama3.2`, `mistral`)
+- **Structured Output Reliability**: Native JSON mode with strict Pydantic v2 validation and automated 1-retry fallback.
 
 ---
 
@@ -195,18 +242,19 @@ MeetingMind employs two complementary RAG engines tailored for different analyti
 ```
 MeetingMind/
 │
-├── api.py                    # FastAPI application, auth endpoints, CRUD, and RAG/Agent routes
+├── api.py                    # FastAPI gateway, auth endpoints, audio ingestion, RAG & agent routes
 ├── auth.py                   # JWT HS256 auth, password hashing (bcrypt), and current user dependency
 ├── database.py               # SQLite database connection and session maker (app.db)
 ├── models.py                 # SQLAlchemy ORM models (User, Meeting, Task)
 ├── schemas.py                # Pydantic v2 schemas (ActionItem, Decision, MeetingExtraction, etc.)
 │
+├── transcription.py          # Audio transcription module (Groq Whisper v3 + Gemini audio failover)
 ├── extractor.py              # LLM extraction pipeline with schema validation and citation checking
 ├── citation_guard.py         # Deterministic verbatim substring & normalized quote verification
 ├── prompts.py                # System prompts for extraction, summary, and cross-meeting synthesis
 ├── llm.py                    # Multi-provider LLM dispatch (Groq, Gemini, Ollama) with JSON mode
 │
-├── rag_index.py              # Hierarchical Parent-Child RAG with SentenceTransformers + FAISS
+├── rag_index.py              # Hierarchical Parent-Child RAG with dense vectors + pure-Python fallback
 ├── corpus.py                 # Cross-meeting multi-document vector index and synthesis engine
 │
 ├── agent.py                  # ReAct autonomous agent execution loop with step tracking
@@ -219,36 +267,40 @@ MeetingMind/
 │
 ├── requirements.txt          # Python backend dependencies
 ├── .env.example              # Environment variables template
-├── .env                      # Local environment configuration (API keys, models, secrets)
+├── LICENSE                   # Open-source MIT License
 │
-├── demo_data/                # Enterprise sample transcripts for testing and evaluation
+├── demo_data/                # 7 standardized enterprise meeting benchmarks
 │   ├── 01_cloud_architecture_migration_sync.txt
-│   ├── 02_q3_enterprise_saas_product_strategy.txt
-│   ├── 03_security_soc2_compliance_audit_review.txt
-│   ├── 04_fintech_payment_gateway_incident_postmortem.txt
-│   └── 05_ai_copilot_engineering_roadmap_sync.txt
-│
-├── examples/                 # Classic benchmark transcripts (e.g. dunder-mifflin-sales.txt)
+│   ├── 02_q3_crossfunctional_product_launch.txt
+│   ├── 03_security_incident_postmortem_audit.txt
+│   ├── 04_enterprise_client_qbr_negotiation.txt
+│   ├── 05_ai_copilot_engineering_roadmap_sync.txt
+│   ├── 06_ev_battery_management_fyp_architecture_sync.txt
+│   ├── 07_ev_battery_management_fyp_testing_evaluation_review.txt
+│   └── README.md             # Dataset scenario documentation & technical evaluation objectives
 │
 └── frontend/                 # React 19 + Vite Frontend SPA
     ├── package.json          # Frontend dependencies (React 19, Lucide React, Vite)
     ├── vite.config.js        # Vite configuration with API reverse proxy
+    ├── README.md             # Comprehensive frontend design system & component documentation
     └── src/
-        ├── App.jsx           # Root application component and tab coordinator
-        ├── index.css         # Glassmorphism design system, dark palette, responsive utilities
+        ├── App.jsx           # Root layout and tab coordinator
+        ├── index.css         # Glassmorphism design system & theme tokens
         ├── context/
-        │   └── AuthContext.jsx # Authentication state and Bearer token wrapper (authFetch)
+        │   ├── AuthContext.jsx # JWT session management & authFetch wrapper
+        │   └── ThemeContext.jsx# Dark/Light mode theme state
         └── components/
-            ├── Header.jsx           # Application header with LLM provider selector & user profile
-            ├── Navigation.jsx       # Primary navigation bar (Extraction, Intelligence, Tasks)
-            ├── ExtractionStudio.jsx # Extraction dashboard, dialogue player, and email/Jira exporters
-            ├── QueryHub.jsx         # Sub-tab switcher for Intelligence Hub
+            ├── Header.jsx           # Status header, LLM provider selector & user controls
+            ├── Navigation.jsx       # Workspace navigation bar (Studio, Intelligence, Tasks)
+            ├── ExtractionStudio.jsx # Unified transcript studio, audio recorder & deliverable generator
+            ├── QueryHub.jsx         # Tab switcher for deep analytical tools
             ├── MeetingAnalytics.jsx # Local NLP analytics dashboard (Sentiment, Speakers, Bigrams)
             ├── AgentChat.jsx        # ReAct Autonomous Agent studio with tool controls & thought trace
-            ├── RagExplorer.jsx      # Interactive Hierarchical RAG visual inspector
+            ├── RagExplorer.jsx      # Hierarchical RAG visual inspector (Child ➔ Parent)
             ├── CorpusStudio.jsx     # Cross-Meeting multi-transcript knowledge synthesizer
             ├── GlobalTasks.jsx      # Action item checklist & Google Calendar integration
-            └── AuthScreen.jsx       # Glassmorphism login & registration modal
+            ├── FeatureGuideModal.jsx# Interactive architectural guide modal
+            └── AuthScreen.jsx       # Login & registration modal
 ```
 
 ---
@@ -274,17 +326,11 @@ class MeetingExtraction(BaseModel):
     decisions: list[Decision] = Field(default_factory=list)
 ```
 
-### SQLAlchemy Database Models (`models.py`)
-
-- **`User`**: `id`, `username`, `hashed_password`, `created_at`
-- **`Meeting`**: `id`, `user_id`, `title`, `transcript_text`, `created_at`
-- **`Task`**: `id`, `user_id`, `meeting_id`, `description`, `owner`, `deadline`, `evidence_quote`, `done`, `created_at`
-
 ---
 
 ## 🔌 REST API Specification
 
-All routes under `/api/*` accept and return JSON. Authenticated endpoints require `Authorization: Bearer <token>`.
+All routes under `/api/*` accept and return JSON (except audio uploads which accept `multipart/form-data`). Authenticated endpoints require `Authorization: Bearer <token>`.
 
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
@@ -292,12 +338,16 @@ All routes under `/api/*` accept and return JSON. Authenticated endpoints requir
 | `POST` | `/api/auth/register` | No | Register new user account |
 | `POST` | `/api/auth/login` | No | Authenticate user and receive JWT token |
 | `GET` | `/api/meetings` | **Yes** | List all archived meetings for current user |
-| `POST` | `/api/meetings` | **Yes** | Create and persist a new meeting transcript |
+| `POST` | `/api/meetings` | **Yes** | Create and persist a new text meeting transcript |
+| `POST` | `/api/meetings/audio` | **Yes** | Upload audio recording, transcribe via Whisper, and save meeting |
+| `POST` | `/api/transcribe` | **Yes** | Transcribe audio recording without immediately saving |
+| `PATCH`| `/api/meetings/{id}` | **Yes** | Rename meeting title |
 | `DELETE`| `/api/meetings/{id}` | **Yes** | Delete meeting and associated tasks |
 | `POST` | `/api/extract` | **Yes** | Run LLM extraction + Citation Guard verification |
 | `POST` | `/api/analyze` | **Yes** | Run zero-cost local NLP analytics (Sentiment, Speakers, Timeline) |
 | `POST` | `/api/search` | **Yes** | Hierarchical RAG vector search (Child $\to$ Parent) |
 | `POST` | `/api/ask` | **Yes** | Execute ReAct Autonomous Agent multi-step reasoning |
+| `POST` | `/api/corpus/build` | **Yes** | Build multi-meeting vector index across archives |
 | `POST` | `/api/corpus/search` | **Yes** | Search across all/selected indexed meeting archives |
 | `POST` | `/api/corpus/ask` | **Yes** | Ask a natural language question across the entire meeting corpus |
 | `GET` | `/api/tasks` | **Yes** | Fetch persistent action items for user |
@@ -312,19 +362,19 @@ MeetingMind provides a command-line interface via `cli.py`:
 
 ```bash
 # 1. Extract action items, decisions, and summary with citation verification
-python cli.py extract examples/dunder-mifflin-sales.txt --provider groq
+python cli.py extract demo_data/01_cloud_architecture_migration_sync.txt --provider groq
 
 # 2. Hierarchical RAG search over a single transcript
-python cli.py search examples/dunder-mifflin-sales.txt "who owns client relationships?" -k 3
+python cli.py search demo_data/01_cloud_architecture_migration_sync.txt "who owns compute optimization?" -k 3
 
 # 3. Ask a question via the ReAct Autonomous Agent
-python cli.py ask examples/dunder-mifflin-sales.txt "What did Pam agree to do and when?"
+python cli.py ask demo_data/01_cloud_architecture_migration_sync.txt "What did Elena agree to do and by when?"
 
 # 4. Build a persistent cross-meeting corpus from a directory of transcripts
 python cli.py corpus-build demo_data/ --out corpus/
 
 # 5. Ask a question across the entire indexed corpus
-python cli.py corpus-ask "What are all the budget decisions across all projects?" --corpus corpus/
+python cli.py corpus-ask "What are all the architecture decisions agreed to across all meetings?" --corpus corpus/
 
 # 6. Run evaluation against the AMI benchmark corpus
 python cli.py eval --n 10 --provider groq
@@ -336,16 +386,17 @@ python cli.py eval --n 10 --provider groq
 
 The frontend is divided into specialized workspace tabs:
 
-1. **⚡ Extraction Studio ([`ExtractionStudio.jsx`](file:///d:/MeetingMind/frontend/src/components/ExtractionStudio.jsx))**:
-   - Live transcript viewer with synchronized turn-by-turn playback.
+1. **⚡ Extraction Studio ([`ExtractionStudio.jsx`](frontend/src/components/ExtractionStudio.jsx))**:
+   - Live microphone recorder (`navigator.mediaDevices`) with visual timer and audio file uploader.
+   - Live transcript viewer with turn-by-turn playback and quote spotlighting.
    - Verified Action Items with green (Accepted) / red (Rejected) citation badges.
-   - **One-Click Productivity Exporters**: Executive Summary, Action-Oriented Email, Jira/Linear Markdown Tickets, and Slack/Teams Broadcasts.
-2. **🧠 Intelligence Hub ([`QueryHub.jsx`](file:///d:/MeetingMind/frontend/src/components/QueryHub.jsx))**:
-   - **Meeting Intelligence ([`MeetingAnalytics.jsx`](file:///d:/MeetingMind/frontend/src/components/MeetingAnalytics.jsx))**: Speaker participation radar, VADER sentiment dials, timeline entity map, and TF bigrams.
-   - **Autonomous Agent ([`AgentChat.jsx`](file:///d:/MeetingMind/frontend/src/components/AgentChat.jsx))**: ReAct execution trace, expandable thought steps, tool enable/disable toggles, and standalone tool playground.
-   - **Hierarchical RAG ([`RagExplorer.jsx`](file:///d:/MeetingMind/frontend/src/components/RagExplorer.jsx))**: Vector similarity score bars, child turn highlight, and parent context expansion cards.
-   - **Corpus Studio ([`CorpusStudio.jsx`](file:///d:/MeetingMind/frontend/src/components/CorpusStudio.jsx))**: Multi-meeting transcript manager, cross-meeting vector search, and grounded synthesis view.
-3. **📋 Global Tasks & Sync ([`GlobalTasks.jsx`](file:///d:/MeetingMind/frontend/src/components/GlobalTasks.jsx))**:
+   - **One-Click Deliverable Exporters**: Executive Summary, Action-Oriented Follow-up Email, and Jira/Linear markdown tickets.
+2. **🧠 Intelligence Hub ([`QueryHub.jsx`](frontend/src/components/QueryHub.jsx))**:
+   - **Meeting Analytics ([`MeetingAnalytics.jsx`](frontend/src/components/MeetingAnalytics.jsx))**: Speaker participation radar, VADER sentiment dials, timeline entity map, and TF bigrams.
+   - **Autonomous Agent ([`AgentChat.jsx`](frontend/src/components/AgentChat.jsx))**: ReAct execution trace, expandable thought steps, and tool enable/disable toggles.
+   - **Hierarchical RAG ([`RagExplorer.jsx`](frontend/src/components/RagExplorer.jsx))**: Vector similarity score bars, child turn highlight, and parent context expansion cards.
+   - **Corpus Studio ([`CorpusStudio.jsx`](frontend/src/components/CorpusStudio.jsx))**: Multi-meeting transcript manager, cross-meeting vector search, and grounded synthesis view.
+3. **📋 Global Tasks & Sync ([`GlobalTasks.jsx`](frontend/src/components/GlobalTasks.jsx))**:
    - Cross-meeting action item checklist with completion toggles and direct Google Calendar event generation.
 
 ---
@@ -360,7 +411,7 @@ The frontend is divided into specialized workspace tabs:
 
 ```bash
 # Clone repository
-git clone https://github.com/<your-username>/MeetingMind.git
+git clone https://github.com/aaritmehta15/MeetingMind.git
 cd MeetingMind
 
 # Create and activate Python virtual environment
@@ -379,12 +430,12 @@ cp .env.example .env
 
 Edit `.env` and add your API keys:
 ```ini
-LLM_PROVIDER=groq
+LLM_PROVIDER=gemini
 GROQ_API_KEY=gsk_your_groq_api_key_here
-GROQ_MODEL=groq/compound-mini
+GROQ_MODEL=qwen/qwen3.8-27b
 
-GEMINI_API_KEY=your_gemini_key_here
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
 
 JWT_SECRET=your_super_secret_jwt_key_32_chars_long
 ```
@@ -398,7 +449,7 @@ python sanity_check.py
 ### 3. Start Backend Server
 
 ```bash
-python -m uvicorn api:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn api:app --host 127.0.0.1 --port 8000
 ```
 
 ### 4. Setup & Start Frontend
@@ -422,7 +473,7 @@ MeetingMind includes a benchmarking harness using the AMI Meeting Corpus:
 python cli.py eval --n 10 --provider groq
 ```
 
-Metrics tracked in [`eval.py`](file:///d:/MeetingMind/eval.py):
+Metrics tracked in `eval.py`:
 - **ROUGE-1, ROUGE-2, ROUGE-L**: Summary precision and recall against ground-truth human annotations.
 - **Citation Precision**: Percentage of generated action items verified by verbatim ground truth.
 - **Inference Latency**: Average time per extraction turn in milliseconds.
@@ -431,8 +482,8 @@ Metrics tracked in [`eval.py`](file:///d:/MeetingMind/eval.py):
 
 ## 🛡️ Security, Privacy & Local Execution
 
-- **Zero Third-Party Vector Storage**: Vector indices are computed locally on CPU via FAISS and `sentence-transformers`. Transcripts and embeddings never leave your machine.
-- **Stateless LLM Dispatch**: LLM API calls do not retain customer data for training.
+- **Zero Third-Party Vector Storage**: Vector indices are computed locally on CPU via FAISS / NumPy and `sentence-transformers`. Transcripts and embeddings never leave your local infrastructure.
+- **Stateless LLM Ingestion**: LLM API calls are stateless and do not retain enterprise customer data for model training.
 - **Deterministic Guarding**: Visual audit trails ensure no unverified or hallucinated tasks enter your task management systems.
 
 ---
