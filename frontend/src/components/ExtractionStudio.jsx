@@ -4,7 +4,7 @@ import {
   Loader2, Sparkles, Brain, FileText, Trash2, Copy, Check, 
   Mail, CheckSquare, MessageSquare,
   BarChart2, Eye, Upload, ChevronDown, Edit3, HelpCircle,
-  Columns, Maximize2, Minimize2
+  Columns, Maximize2, Minimize2, Mic, Square, FileAudio
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import MarkdownAnswer from './MarkdownAnswer';
@@ -12,6 +12,14 @@ import MarkdownAnswer from './MarkdownAnswer';
 export default function ExtractionStudio({ userMeetings, provider, fetchUserMeetings, onOpenGuide }) {
   const { authFetch } = useAuth();
   const fileInputRef = useRef(null);
+  const audioInputRef = useRef(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+
   const [selectedMeetingId, setSelectedMeetingId] = useState('');
   const [transcript, setTranscript] = useState('');
   const [loading, setLoading] = useState(false);
@@ -175,6 +183,117 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
     e.target.value = null;
   };
 
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stream?.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
+
+  const formatAudioTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Microphone recording is not supported in this browser.");
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.start(250);
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      alert("Could not access microphone: " + (err.message || err));
+    }
+  };
+
+  const stopRecording = () => {
+    if (!mediaRecorderRef.current) return;
+    const recorder = mediaRecorderRef.current;
+    
+    recorder.onstop = async () => {
+      clearInterval(recordingTimerRef.current);
+      recorder.stream.getTracks().forEach(track => track.stop());
+      setIsRecording(false);
+      
+      const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+      if (audioBlob.size === 0) {
+        alert("Recorded audio was empty.");
+        return;
+      }
+      
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      await uploadAndProcessAudio(audioBlob, `Voice Recording (${timestamp}).webm`);
+    };
+
+    recorder.stop();
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current) {
+      clearInterval(recordingTimerRef.current);
+      mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current = null;
+    }
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    setRecordingDuration(0);
+  };
+
+  const handleAudioUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await uploadAndProcessAudio(file, file.name);
+    e.target.value = null;
+  };
+
+  const uploadAndProcessAudio = async (audioData, fileName) => {
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', audioData, fileName);
+      formData.append('title', fileName.replace(/\.[^/.]+$/, ""));
+
+      const res = await authFetch('/api/meetings/audio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Audio transcription failed');
+
+      await fetchUserMeetings?.();
+      setSelectedMeetingId(data.id);
+      setTranscript(data.transcript_text);
+      setResult(null);
+    } catch (err) {
+      console.error("Transcription error:", err);
+      alert("Error transcribing audio: " + err.message);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   const handleExtract = async () => {
     if (!transcript.trim()) return;
     setLoading(true);
@@ -329,7 +448,7 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
             <ChevronDown size={13} style={{ position: 'absolute', right: '10px', color: 'var(--text-dim)', pointerEvents: 'none' }} />
           </div>
 
-          {/* Upload Button */}
+          {/* Text Upload Button */}
           <input 
             type="file" 
             accept=".txt" 
@@ -342,10 +461,92 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
             className="btn btn-secondary btn-sm"
             style={{ padding: '6px 12px', fontSize: '0.78rem' }}
             title="Upload custom .txt transcript"
+            disabled={isTranscribing || isRecording}
           >
             <Upload size={13} />
-            <span>Upload</span>
+            <span>Text File</span>
           </button>
+
+          {/* Audio Upload Button */}
+          <input 
+            type="file" 
+            accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac,.aac" 
+            ref={audioInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleAudioUpload} 
+          />
+          <button 
+            onClick={() => audioInputRef.current?.click()}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+            title="Upload audio recording (.mp3, .wav, .m4a, .webm)"
+            disabled={isTranscribing || isRecording}
+          >
+            <FileAudio size={13} />
+            <span>Audio File</span>
+          </button>
+
+          {/* Live Microphone Recording Button / Active Recording Bar */}
+          {!isRecording ? (
+            <button 
+              onClick={startRecording}
+              className="btn btn-secondary btn-sm"
+              style={{ 
+                padding: '6px 12px', 
+                fontSize: '0.78rem',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#ef4444',
+                background: 'rgba(239, 68, 68, 0.08)'
+              }}
+              title="Record live meeting audio from microphone"
+              disabled={isTranscribing}
+            >
+              <Mic size={13} />
+              <span>Record</span>
+            </button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-full)',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.5)',
+                color: '#ef4444',
+                fontWeight: 700,
+                fontSize: '0.76rem'
+              }}>
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#ef4444',
+                  boxShadow: '0 0 8px #ef4444',
+                  display: 'inline-block'
+                }} />
+                <span>REC {formatAudioTime(recordingDuration)}</span>
+              </div>
+              <button
+                onClick={stopRecording}
+                className="btn btn-primary btn-sm"
+                style={{ padding: '5px 11px', fontSize: '0.76rem', background: '#ef4444', borderColor: '#dc2626' }}
+                title="Stop recording and transcribe with Whisper AI"
+              >
+                <Square size={11} fill="currentColor" />
+                <span>Transcribe</span>
+              </button>
+              <button
+                onClick={cancelRecording}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '5px 9px', fontSize: '0.76rem' }}
+                title="Cancel recording"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
 
           {/* Layout Mode Toggle */}
           <button
@@ -375,6 +576,31 @@ export default function ExtractionStudio({ userMeetings, provider, fetchUserMeet
           )}
         </div>
       </div>
+
+      {/* ── AUDIO TRANSCRIBING BANNER ── */}
+      {isTranscribing && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '14px 20px',
+          borderRadius: 'var(--radius-lg)',
+          background: 'rgba(20, 184, 166, 0.08)',
+          border: '1px solid rgba(20, 184, 166, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          boxShadow: 'var(--shadow-sm)'
+        }}>
+          <Loader2 size={20} className="animate-spin" color="var(--primary)" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)' }}>
+              Transcribing audio with Whisper AI...
+            </span>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+              Converting spoken speech into verified speaker dialogue turns and saving to your meeting library.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── MAIN WORKSPACE ── */}
       <div 

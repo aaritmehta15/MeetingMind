@@ -16,11 +16,11 @@ export const GUIDE_FEATURES = {
     sections: [
       {
         heading: 'What It Does',
-        content: 'Extracts an executive TL;DR summary, discrete action items with assigned owners and deadlines, formal decisions, and ready-to-send follow-up emails.'
+        content: 'Accepts raw text transcripts, live microphone recordings, or uploaded audio files (.mp3, .wav, .m4a, .webm). Audio is transcribed via Whisper AI into speaker-labeled turns, then extracts an executive TL;DR summary, discrete action items with assigned owners and deadlines, formal decisions, and ready-to-send follow-up emails.'
       },
       {
         heading: 'Under the Hood (Technology)',
-        content: 'Runs Pydantic v2 schema-enforced JSON extraction. Every action item and decision requires an evidence_quote. The Verbatim Citation Guard checks that quote against the raw transcript. If the quote is fabricated or ungrounded, it is immediately rejected with an audit report.'
+        content: 'Runs Whisper AI for speech-to-text transcription, followed by Pydantic v2 schema-enforced JSON extraction. Every action item and decision requires an evidence_quote. The Verbatim Citation Guard checks that quote against the raw transcript. If the quote is fabricated or ungrounded, it is immediately rejected with an audit report.'
       },
       {
         heading: 'When to Use',

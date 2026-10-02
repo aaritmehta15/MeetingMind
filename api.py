@@ -7,7 +7,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 warnings.filterwarnings("ignore", category=UserWarning)
 
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any
 from pydantic import BaseModel
@@ -22,6 +22,7 @@ from extractor import run_extraction
 from rag_index import HierarchicalRAGIndex
 from agent import run_agent_with_steps
 from corpus import build_corpus, corpus_ask
+from transcription import transcribe_audio
 
 def seed_db():
     db = next(get_db())
@@ -227,6 +228,66 @@ def create_meeting(meeting: MeetingCreate, current_user: User = Depends(get_curr
     db.commit()
     db.refresh(new_meeting)
     return {"id": new_meeting.id, "title": new_meeting.title, "message": "Meeting saved successfully"}
+
+@app.post("/api/meetings/audio")
+async def create_meeting_from_audio(
+    file: UploadFile = File(...),
+    title: str = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload or record an audio meeting. Transcribes via Groq Whisper/Gemini and saves to database."""
+    try:
+        audio_bytes = await file.read()
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="Audio file is empty")
+
+        filename = file.filename or "recording.webm"
+        meeting_title = title or Path(filename).stem or "Audio Meeting"
+        
+        # Transcribe audio to speaker-labeled meeting transcript
+        transcript_text = transcribe_audio(audio_bytes, filename=filename)
+        if not transcript_text or not transcript_text.strip():
+            transcript_text = "Speaker 1: (No audible speech detected in recording)"
+
+        new_meeting = Meeting(user_id=current_user.id, title=meeting_title, transcript_text=transcript_text)
+        db.add(new_meeting)
+        db.commit()
+        db.refresh(new_meeting)
+
+        return {
+            "id": new_meeting.id,
+            "title": new_meeting.title,
+            "transcript_text": new_meeting.transcript_text,
+            "turn_count": len([l for l in new_meeting.transcript_text.splitlines() if ":" in l]),
+            "message": "Audio meeting successfully transcribed and saved"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Audio transcription failed: {str(e)}")
+
+@app.post("/api/transcribe")
+async def transcribe_only(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Transcribe an audio recording or file and return the transcript without saving immediately."""
+    try:
+        audio_bytes = await file.read()
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="Audio file is empty")
+        filename = file.filename or "recording.webm"
+        transcript_text = transcribe_audio(audio_bytes, filename=filename)
+        return {
+            "transcript": transcript_text,
+            "filename": filename,
+            "turn_count": len([l for l in transcript_text.splitlines() if ":" in l])
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 @app.patch("/api/meetings/{meeting_id}")
 def rename_meeting(meeting_id: int, req: MeetingRename, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
