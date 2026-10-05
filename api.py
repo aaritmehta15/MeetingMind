@@ -147,6 +147,12 @@ class AnalyzeRequest(BaseModel):
 
 
 
+@app.get("/health")
+@app.get("/v2/health")
+@app.get("/")
+def health_check():
+    return {"status": "ok", "app": "MeetingMind"}
+
 @app.get("/api/status")
 def get_status():
     return {
