@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://127.0.0.1:8001"
 
 def test_suite():
     print("=" * 60)
